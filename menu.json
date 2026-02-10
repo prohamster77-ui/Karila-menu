@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "currencySymbol": "Rp",
+    "currencyCode": "IDR"
+  },
+  "items": [
+    {
+      "id": 1,
+      "name": "Burger Deluxe",
+      "description": "Juicy beef patty with fresh veggies and special sauce",
+      "price": 50000,
+      "image": "burger.jpeg",
+      "stock": 15,
+      "discount": 20
+    },
+    {
+      "id": 2,
+      "name": "Margherita Pizza",
+      "description": "Classic pizza with tomato, mozzarella, and fresh basil",
+      "price": 85000,
+      "image": "pizza.png",
+      "stock": 8,
+      "discount": 0
+    }
+  ]
+}
