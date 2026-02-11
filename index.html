@@ -3,81 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delicious Bites | Live Menu</title>
+    <title>Karlia | Exclusive Menu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- STYLING --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-            color: #fff; min-height: 100vh; padding: 20px; 
+        /* --- ELEGANT THEME STYLING --- */
+        :root {
+            --gold: #d4af37;
+            --gold-hover: #f1c40f;
+            --dark-glass: rgba(0, 0, 0, 0.75);
+            --light-glass: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(212, 175, 55, 0.3);
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            color: #eee; 
+            min-height: 100vh; 
+            padding: 20px;
+            /* BACKGROUND IMAGE SETUP */
+            background: url('Background.jpg') no-repeat center center fixed; 
+            background-size: cover;
+            position: relative;
+        }
+
+        /* Dark Overlay to make text readable on top of the image */
+        body::before {
+            content: '';
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); /* Adjust 0.7 to make image darker/lighter */
+            z-index: -1;
+        }
+
         .container { max-width: 1100px; margin: 0 auto; }
-        header { text-align: center; padding: 40px 0; }
-        header h1 { font-size: 3rem; margin-bottom: 10px; background: linear-gradient(to right, #00b894, #00cec9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        /* Sync Indicator */
-        .sync-status { display: inline-flex; align-items: center; background: rgba(255,255,255,0.1); padding: 6px 15px; border-radius: 20px; font-size: 0.8rem; border: 1px solid rgba(0, 184, 148, 0.3); }
-        .dot { height: 8px; width: 8px; background-color: #00b894; border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 
-        /* Grid & Cards */
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
-        .menu-item { background: #fff; color: #333; border-radius: 15px; overflow: hidden; position: relative; display: flex; flex-direction: column; transition: transform 0.3s; }
-        .menu-item:hover { transform: translateY(-8px); }
+        header { text-align: center; padding: 50px 0; }
+        header h1 { 
+            font-family: 'Playfair Display', serif; 
+            font-size: 3.5rem; 
+            margin-bottom: 10px; 
+            color: var(--gold);
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+        }
+        header p { font-weight: 300; letter-spacing: 1px; color: #ccc; }
         
-        .item-image { width: 100%; height: 200px; background: #eee; position: relative; }
-        .item-image img { width: 100%; height: 100%; object-fit: cover; }
+        /* Sync Indicator - Minimalist */
+        .sync-status { 
+            display: inline-flex; align-items: center; margin-top: 15px;
+            background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 50px; 
+            font-size: 0.75rem; border: 1px solid var(--border-color); color: var(--gold);
+        }
+        .dot { height: 6px; width: 6px; background-color: var(--gold); border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* Grid & Cards - GLASSMORPHISM */
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; margin-top: 40px; }
         
-        .discount-badge { position: absolute; top: 12px; right: 12px; background: #ff4757; color: #fff; padding: 4px 10px; border-radius: 8px; font-weight: bold; font-size: 0.8rem; }
-        .stock-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.7); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; backdrop-filter: blur(4px); }
-        .stock-out { background: #ff4757; font-weight: bold; }
-        .stock-low { background: #f39c12; }
-
-        .item-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
-        .item-name { font-size: 1.4rem; font-weight: bold; margin-bottom: 8px; }
-        .item-desc { font-size: 0.9rem; color: #666; margin-bottom: 15px; line-height: 1.4; flex-grow: 1; }
+        .menu-item { 
+            background: var(--dark-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px; 
+            overflow: hidden; 
+            display: flex; flex-direction: column; 
+            transition: transform 0.3s, box-shadow 0.3s; 
+        }
+        .menu-item:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            border-color: var(--gold);
+        }
         
-        .price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 20px; }
-        .now-price { font-size: 1.6rem; font-weight: 800; color: #00b894; }
-        .was-price { font-size: 1rem; color: #b2bec3; text-decoration: line-through; }
-
-        .qty-box { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px; background: #f1f2f6; padding: 8px; border-radius: 10px; }
-        .qty-btn { width: 32px; height: 32px; border: none; background: #6c5ce7; color: #fff; border-radius: 8px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
-        .qty-btn:disabled { background: #ccc; }
+        .item-image { width: 100%; height: 220px; background: #222; position: relative; }
+        .item-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .menu-item:hover .item-image img { transform: scale(1.05); }
         
-        .buy-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; background: #00b894; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .buy-btn:hover { background: #00a082; }
-        .buy-btn:disabled { background: #dfe6e9; color: #b2bec3; cursor: not-allowed; }
+        .discount-badge { position: absolute; top: 15px; right: 15px; background: #c0392b; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .stock-badge { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.8); color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
+        .stock-out { background: #c0392b; border: none; }
+        .stock-low { background: #d35400; border: none; }
 
-        /* Cart & Modal */
-        .cart-trigger { position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; background: #00b894; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3); z-index: 100; }
-        .count-pill { position: absolute; top: -5px; right: -5px; background: #ff4757; color: #fff; min-width: 24px; height: 24px; padding: 2px; border-radius: 12px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .item-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
+        .item-name { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #fff; margin-bottom: 8px; }
+        .item-desc { font-size: 0.9rem; color: #aaa; margin-bottom: 20px; line-height: 1.6; flex-grow: 1; font-weight: 300; }
+        
+        .price-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        .now-price { font-size: 1.5rem; font-weight: 600; color: var(--gold); }
+        .was-price { font-size: 0.95rem; color: #777; text-decoration: line-through; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+        .qty-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 8px; }
+        .qty-btn { width: 35px; height: 35px; border: none; background: transparent; color: #fff; cursor: pointer; font-size: 1.2rem; transition: 0.2s; border-radius: 4px; }
+        .qty-btn:hover { background: rgba(255,255,255,0.1); color: var(--gold); }
+        .qty-btn:disabled { color: #555; cursor: not-allowed; }
+        
+        .buy-btn { 
+            width: 100%; padding: 15px; border: none; border-radius: 8px; 
+            background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); 
+            color: #000; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem;
+            cursor: pointer; transition: 0.3s; 
+        }
+        .buy-btn:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3); }
+        .buy-btn:disabled { background: #444; color: #777; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Cart Floating Button */
+        .cart-trigger { 
+            position: fixed; bottom: 30px; right: 30px; 
+            width: 70px; height: 70px; 
+            background: #111; border: 2px solid var(--gold);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 1.8rem; cursor: pointer; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; transition: transform 0.2s;
+        }
+        .cart-trigger:hover { transform: scale(1.1); }
+        .count-pill { position: absolute; top: 0; right: 0; background: #c0392b; color: #fff; min-width: 24px; height: 24px; padding: 2px; border-radius: 50%; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #111; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal.open { display: flex; }
-        .modal-body { background: #fff; color: #333; width: 90%; max-width: 450px; border-radius: 20px; padding: 30px; position: relative; max-height: 85vh; overflow-y: auto; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-        .total-box { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; text-align: right; font-size: 1.3rem; font-weight: 800; }
+        .modal-body { 
+            background: #1a1a1a; color: #fff; width: 90%; max-width: 500px; 
+            border-radius: 20px; padding: 35px; position: relative; 
+            max-height: 85vh; overflow-y: auto; border: 1px solid var(--gold);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.1);
+        }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .total-box { margin-top: 25px; padding: 20px; background: rgba(212, 175, 55, 0.1); border-radius: 10px; text-align: right; font-size: 1.4rem; font-weight: 600; color: var(--gold); font-family: 'Playfair Display', serif; }
         
-        .wa-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 18px; margin-top: 20px; background: #25D366; color: #fff; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .wa-btn { 
+            display: flex; align-items: center; justify-content: center; gap: 10px; 
+            width: 100%; padding: 18px; margin-top: 25px; 
+            background: #25D366; color: #fff; border: none; border-radius: 10px; 
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .wa-btn:hover { background: #20bd5a; }
         
-        .close-x { position: absolute; top: 15px; right: 20px; font-size: 2rem; cursor: pointer; color: #999; }
+        .close-x { position: absolute; top: 20px; right: 25px; font-size: 2rem; cursor: pointer; color: #666; transition: 0.2s; }
+        .close-x:hover { color: var(--gold); }
 
-        .notify { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 25px; border-radius: 30px; font-size: 0.9rem; z-index: 9999; display: none; }
+        .notify { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 12px 30px; border-radius: 30px; font-weight: 600; z-index: 9999; display: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
     <div class="container">
         <header>
-            <h1>🍽️ Delicious Bites</h1>
-            <p>Order fresh food instantly</p>
-            <div class="sync-status"><div class="dot"></div> Live Stock Sync Active</div>
+            <h1>🐺 Karlia</h1>
+            <p>Taste the Thrill. Experience Luxury.</p>
+            <div class="sync-status"><div class="dot"></div> Live Stock</div>
         </header>
 
         <div class="menu-grid" id="menuGrid">
-            <div style="grid-column: 1/-1; text-align: center;">Refreshing Menu...</div>
+            <div style="grid-column: 1/-1; text-align: center; color: var(--gold);">Loading Menu...</div>
         </div>
     </div>
 
@@ -86,10 +166,10 @@
     <div class="modal" id="cartModal">
         <div class="modal-body">
             <span class="close-x" id="cartClose">&times;</span>
-            <h2 style="margin-bottom: 20px;">Your Selection</h2>
+            <h2 style="margin-bottom: 20px; font-family: 'Playfair Display'; color: var(--gold);">Your Selection</h2>
             <div id="cartItemsList"></div>
             <div class="total-box" id="cartTotal"></div>
-            <button class="wa-btn" id="waSend">Order via WhatsApp</button>
+            <button class="wa-btn" id="waSend">Confirm Order via WhatsApp</button>
         </div>
     </div>
 
@@ -97,7 +177,7 @@
 
     <script>
         // --- CONFIGURATION ---
-        const MY_PHONE = "6282311981783"; // Your WhatsApp number
+        const MY_PHONE = "6282311981783"; 
         
         let menuItems = [];
         let cart = [];
@@ -111,16 +191,13 @@
                 const res = await fetch('menu.json?v=' + Date.now());
                 const data = await res.json();
                 
-                // Compare to prevent flickering
                 const currentStr = JSON.stringify(data);
                 if (currentStr === lastJsonString) return;
                 lastJsonString = currentStr;
 
-                // Set Global Settings
                 currencySymbol = data.settings.currencySymbol || "$";
                 menuItems = data.items;
 
-                // Sync quantities selected by user
                 menuItems.forEach(item => {
                     if (!quantities[item.id]) quantities[item.id] = 1;
                 });
@@ -128,11 +205,10 @@
                 renderUI();
             } catch (e) {
                 console.error("Fetch error", e);
-                if(!isSilent) document.getElementById('menuGrid').innerHTML = "Error loading menu. Check Live Server.";
+                if(!isSilent) document.getElementById('menuGrid').innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Error loading menu. Check Live Server.</div>";
             }
         }
 
-        // Auto-refresh every 3 seconds
         setInterval(() => loadMenu(true), 3000);
 
         // 2. RENDERING
@@ -148,10 +224,10 @@
                 grid.innerHTML += `
                     <div class="menu-item">
                         <div class="item-image">
-                            <img src="${item.image}" onerror="this.src='https://placehold.co/400x300?text=${item.name}'">
+                            <img src="${item.image}" onerror="this.src='https://placehold.co/400x300/333/d4af37?text=${item.name}'">
                             ${item.discount > 0 ? `<div class="discount-badge">-${item.discount}%</div>` : ''}
                             <div class="stock-badge ${isOut ? 'stock-out' : (isLow ? 'stock-low' : '')}">
-                                ${isOut ? 'Sold Out' : (isLow ? `Hurry! Only ${item.stock} left` : `${item.stock} Available`)}
+                                ${isOut ? 'Sold Out' : (isLow ? `Only ${item.stock} Left` : `${item.stock} in stock`)}
                             </div>
                         </div>
                         <div class="item-content">
@@ -162,7 +238,7 @@
                                 ${item.discount > 0 ? `<span class="was-price">${currencySymbol}${item.price.toLocaleString()}</span>` : ''}
                             </div>
                             <div class="qty-box">
-                                <button class="qty-btn" onclick="changeQty(${item.id}, -1)" ${isOut ? 'disabled' : ''}>-</button>
+                                <button class="qty-btn" onclick="changeQty(${item.id}, -1)" ${isOut ? 'disabled' : ''}>−</button>
                                 <span id="qty-val-${item.id}" style="font-weight:bold; width: 30px; text-align:center">${quantities[item.id]}</span>
                                 <button class="qty-btn" onclick="changeQty(${item.id}, 1)" ${isOut || quantities[item.id] >= item.stock ? 'disabled' : ''}>+</button>
                             </div>
@@ -197,7 +273,7 @@
             }
             
             updateCartCounter();
-            flashNotify(`Added ${item.name} to cart`);
+            flashNotify(`Added ${item.name}`);
         }
 
         function updateCartCounter() {
@@ -212,7 +288,7 @@
             let grandTotal = 0;
 
             if (cart.length === 0) {
-                list.innerHTML = "<p style='text-align:center; padding: 20px;'>Your cart is empty.</p>";
+                list.innerHTML = "<p style='text-align:center; padding: 20px; color: #888;'>Your cart is empty.</p>";
                 totalEl.innerText = "";
                 return;
             }
@@ -225,10 +301,10 @@
                 list.innerHTML += `
                     <div class="cart-item">
                         <div>
-                            <b>${item.name}</b><br>
-                            <small>${item.quantity} x ${currencySymbol}${unitPrice.toLocaleString()}</small>
+                            <b style="color:var(--gold); font-family:'Playfair Display'">${item.name}</b><br>
+                            <small style="color:#aaa;">${item.quantity} x ${currencySymbol}${unitPrice.toLocaleString()}</small>
                         </div>
-                        <b>${currencySymbol}${subtotal.toLocaleString()}</b>
+                        <b style="color:#fff;">${currencySymbol}${subtotal.toLocaleString()}</b>
                     </div>
                 `;
             });
@@ -241,7 +317,7 @@
             if (cart.length === 0) return;
 
             let total = 0;
-            let msg = "*ORDER SUMMARY* 📝\n--------------------------\n";
+            let msg = "*KARLIA ORDER* 🐺\n--------------------------\n";
             
             cart.forEach(item => {
                 const unitPrice = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
@@ -250,32 +326,24 @@
                 msg += `• *${item.name}*\n  Qty: ${item.quantity} | Sub: ${currencySymbol}${sub.toLocaleString()}\n\n`;
             });
 
-            msg += `--------------------------\n*ESTIMATED TOTAL: ${currencySymbol}${total.toLocaleString()}*`;
+            msg += `--------------------------\n*TOTAL: ${currencySymbol}${total.toLocaleString()}*`;
             
             window.open(`https://wa.me/${MY_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-            
-            // Optional: Clear cart after ordering
             cart = [];
             updateCartCounter();
             document.getElementById('cartModal').classList.remove('open');
         }
 
-        // Helpers
         function flashNotify(m) {
             const n = document.getElementById('notify');
             n.innerText = m; n.style.display = 'block';
             setTimeout(() => n.style.display = 'none', 2500);
         }
 
-        // Listeners
-        document.getElementById('cartOpen').onclick = () => {
-            document.getElementById('cartModal').classList.add('open');
-            renderCartModal();
-        };
+        document.getElementById('cartOpen').onclick = () => { document.getElementById('cartModal').classList.add('open'); renderCartModal(); };
         document.getElementById('cartClose').onclick = () => document.getElementById('cartModal').classList.remove('open');
         document.getElementById('waSend').onclick = sendToWA;
 
-        // Start
         loadMenu();
     </script>
 </body>
