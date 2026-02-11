@@ -15,12 +15,22 @@
     },
     {
       "id": 2,
-      "name": "Margherita Pizza",
+      "name": "Food 2",
       "description": "Classic pizza with tomato, mozzarella, and fresh basil",
       "price": 85000,
       "image": "pizza.png",
       "stock": 8,
       "discount": 0
+    },
+    {
+      "id" : 3,
+      "name": "food 3",
+      "description": "Very good price and Worth to try",
+      "price": 30000,
+      "image": "food3.jpg",
+      "stock": 67,
+      "discount": 0
+  
     }
   ]
 }
