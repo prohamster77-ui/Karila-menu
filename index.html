@@ -13,6 +13,8 @@
             --dark-glass: rgba(0, 0, 0, 0.75);
             --light-glass: rgba(255, 255, 255, 0.05);
             --border-color: rgba(212, 175, 55, 0.3);
+            --danger: #c0392b;
+            --warning: #e67e22;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -53,6 +55,7 @@
         .sync-status:hover { background: rgba(0,0,0,0.9); }
         .dot { height: 6px; width: 6px; background-color: var(--gold); border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
         .dot.syncing { animation: spin 1s linear infinite; background-color: #fff; }
+        .dot.error { background-color: var(--danger); animation: none; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -154,6 +157,9 @@
             padding: 15px 0; 
             border-bottom: 1px solid rgba(255,255,255,0.1); 
         }
+        .cart-item.warning { background: rgba(192, 57, 43, 0.1); border-left: 3px solid var(--danger); padding-left: 10px; margin-left: -10px; }
+        .cart-item.error { background: rgba(192, 57, 43, 0.2); border-left: 3px solid var(--danger); padding-left: 10px; margin-left: -10px; }
+        
         .cart-item-info { flex: 1; }
         .cart-item-name { font-weight: 600; color: #fff; margin-bottom: 4px; }
         .cart-item-details { font-size: 0.85rem; color: #aaa; }
@@ -163,6 +169,24 @@
             margin-right: 15px;
             min-width: 80px;
             text-align: right;
+        }
+        
+        .stock-warning {
+            font-size: 0.75rem;
+            color: var(--warning);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .stock-error {
+            font-size: 0.75rem;
+            color: var(--danger);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
         }
         
         .remove-btn {
@@ -208,6 +232,10 @@
             border-color: var(--gold);
             color: var(--gold);
         }
+        .cart-qty-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
         .cart-qty-value {
             min-width: 24px;
             text-align: center;
@@ -223,6 +251,31 @@
             font-size: 1.4rem; 
             color: var(--gold); 
             font-family: 'Playfair Display', serif; 
+        }
+        
+        .validation-banner {
+            background: linear-gradient(135deg, rgba(192, 57, 43, 0.9) 0%, rgba(231, 76, 60, 0.9) 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s ease;
+        }
+        .validation-banner.show { display: flex; }
+        .validation-banner.warning {
+            background: linear-gradient(135deg, rgba(230, 126, 34, 0.9) 0%, rgba(243, 156, 18, 0.9) 100%);
+        }
+        .validation-banner.success {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.9) 0%, rgba(46, 204, 113, 0.9) 100%);
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .wa-btn { 
@@ -297,9 +350,32 @@
             border-radius: 10px;
             margin: 20px;
         }
+        
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--gold);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 999;
+        }
+        .refresh-indicator.show { display: flex; }
+        .refresh-indicator.syncing { color: #fff; }
     </style>
 </head>
 <body>
+
+    <div class="refresh-indicator" id="refreshIndicator">
+        <span id="refreshIcon">🔄</span>
+        <span id="refreshText">Updating stock...</span>
+    </div>
 
     <div class="container">
         <header>
@@ -324,6 +400,11 @@
             <span class="close-x" id="cartClose">&times;</span>
             <h2 style="margin-bottom: 20px; font-family: 'Playfair Display'; color: var(--gold);">Your Selection</h2>
             
+            <div class="validation-banner" id="validationBanner">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <span id="validationText"></span>
+            </div>
+            
             <div id="cartItemsList"></div>
 
             <div class="name-field">
@@ -343,12 +424,14 @@
         // CONFIG: REPLACE THIS WITH YOUR GOOGLE SHEET URL
         // ============================================
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpF3KDjN_dEBcNoYBve7zBxZOou6xHfTV2hT4E6wAfwgEUVeZ_fnLP0vJ6AjycCG3Evw6rxrGTgenc/pub?output=csv';
-        // ^^^ REPLACE ABOVE URL WITH YOUR PUBLISHED SHEET URL ^^^
         
         const MY_PHONE = "6282311981783"; 
         const CART_STORAGE_KEY = 'karlia_cart';
+        const REFRESH_INTERVAL = 10000; // 10 seconds
         let menuItems = [], quantities = {}, currencySymbol = "Rp", lastFetchTime = null;
         let cart = [];
+        let isCartOpen = false;
+        let stockValidationResults = { valid: true, issues: [] };
 
         // Parse CSV to JSON
         function parseCSV(csvText) {
@@ -361,7 +444,6 @@
                 const obj = {};
                 headers.forEach((header, index) => {
                     let value = currentline[index] || '';
-                    // Convert numeric fields
                     if (['id', 'price', 'stock', 'discount'].includes(header)) {
                         value = parseInt(value) || 0;
                     }
@@ -375,14 +457,15 @@
         async function loadMenu(force = false) {
             const syncDot = document.getElementById('syncDot');
             const syncText = document.getElementById('syncText');
+            const refreshIndicator = document.getElementById('refreshIndicator');
             
             if (!force) {
                 syncDot.classList.add('syncing');
                 syncText.textContent = 'Syncing...';
+                refreshIndicator.classList.add('show', 'syncing');
             }
             
             try {
-                // Add cache buster
                 const url = GOOGLE_SHEET_URL + '&t=' + Date.now();
                 const response = await fetch(url);
                 
@@ -391,10 +474,16 @@
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                menuItems = data.filter(item => item.id); // Remove empty rows
-                currencySymbol = "Rp"; // You can add currency column to sheet if needed
+                const oldMenuItems = [...menuItems];
+                menuItems = data.filter(item => item.id);
+                currencySymbol = "Rp";
                 
-                // Initialize quantities
+                // Check for stock changes that affect cart
+                if (oldMenuItems.length > 0 && isCartOpen) {
+                    validateCartStock(true);
+                }
+                
+                // Update quantities for new items
                 menuItems.forEach(item => {
                     if (!quantities[item.id]) quantities[item.id] = 1;
                 });
@@ -403,10 +492,11 @@
                 updateLastUpdated();
                 renderUI();
                 
-                // Hide loading, show grid
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('errorState').style.display = 'none';
                 document.getElementById('menuGrid').style.display = 'grid';
+                
+                syncDot.classList.remove('error');
                 
             } catch (error) {
                 console.error('Error loading menu:', error);
@@ -417,9 +507,11 @@
                     Cek koneksi internet atau refresh halaman.<br>
                     <small>${error.message}</small>
                 `;
+                syncDot.classList.add('error');
             } finally {
                 syncDot.classList.remove('syncing');
                 syncText.textContent = 'Live Stock';
+                setTimeout(() => refreshIndicator.classList.remove('show', 'syncing'), 500);
             }
         }
 
@@ -427,7 +519,8 @@
             if (lastFetchTime) {
                 const timeStr = lastFetchTime.toLocaleTimeString('id-ID', { 
                     hour: '2-digit', 
-                    minute: '2-digit' 
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
                 document.getElementById('lastUpdated').textContent = `Terakhir update: ${timeStr}`;
             }
@@ -438,8 +531,86 @@
             flashNotify('Refreshing stock...');
         }
 
-        // Auto refresh every 30 seconds
-        setInterval(() => loadMenu(false), 30000);
+        // Auto refresh every 10 seconds
+        setInterval(() => loadMenu(false), REFRESH_INTERVAL);
+
+        function validateCartStock(silent = false) {
+            stockValidationResults = { valid: true, issues: [] };
+            let hasChanges = false;
+            
+            cart.forEach(cartItem => {
+                const currentItem = menuItems.find(m => m.id === cartItem.id);
+                
+                if (!currentItem) {
+                    // Item no longer exists
+                    stockValidationResults.issues.push({
+                        type: 'removed',
+                        item: cartItem,
+                        message: `${cartItem.name} sudah tidak tersedia`
+                    });
+                    stockValidationResults.valid = false;
+                    hasChanges = true;
+                } else if (currentItem.stock <= 0) {
+                    // Item out of stock
+                    stockValidationResults.issues.push({
+                        type: 'outofstock',
+                        item: cartItem,
+                        currentStock: 0,
+                        message: `${cartItem.name} habis (stok: 0)`
+                    });
+                    stockValidationResults.valid = false;
+                    hasChanges = true;
+                } else if (cartItem.quantity > currentItem.stock) {
+                    // Quantity exceeds stock
+                    stockValidationResults.issues.push({
+                        type: 'exceeds',
+                        item: cartItem,
+                        requested: cartItem.quantity,
+                        currentStock: currentItem.stock,
+                        message: `${cartItem.name} melebihi stok (minta: ${cartItem.quantity}, tersedia: ${currentItem.stock})`
+                    });
+                    cartItem.quantity = currentItem.stock; // Auto-adjust
+                    stockValidationResults.valid = false;
+                    hasChanges = true;
+                }
+            });
+            
+            if (hasChanges && !silent) {
+                saveCartToStorage();
+                updateCartCounter();
+                renderCartModal();
+                showValidationBanner();
+            }
+            
+            return stockValidationResults.valid;
+        }
+
+        function showValidationBanner() {
+            const banner = document.getElementById('validationBanner');
+            const text = document.getElementById('validationText');
+            
+            if (stockValidationResults.issues.length === 0) return;
+            
+            const critical = stockValidationResults.issues.filter(i => i.type === 'removed' || i.type === 'outofstock');
+            const adjusted = stockValidationResults.issues.filter(i => i.type === 'exceeds');
+            
+            if (critical.length > 0) {
+                banner.className = 'validation-banner show';
+                text.innerHTML = `<strong>${critical.length} item tidak tersedia</strong> dan telah dihapus dari keranjang. Stok habis saat Anda memesan.`;
+                // Remove invalid items
+                const invalidIds = critical.map(i => i.item.id);
+                cart = cart.filter(c => !invalidIds.includes(c.id));
+                saveCartToStorage();
+                updateCartCounter();
+            } else if (adjusted.length > 0) {
+                banner.className = 'validation-banner warning show';
+                text.innerHTML = `<strong>Stok berubah!</strong> ${adjusted.length} item quantity disesuaikan dengan ketersediaan terbaru.`;
+            }
+            
+            setTimeout(() => {
+                banner.classList.remove('show');
+            }, 5000);
+        }
 
         function renderUI() {
             const grid = document.getElementById('menuGrid');
@@ -450,13 +621,19 @@
                 const isOut = item.stock <= 0;
                 const isLow = item.stock > 0 && item.stock <= 5;
                 
+                // Check if this item is in cart and exceeds stock
+                const inCart = cart.find(c => c.id === item.id);
+                const cartExceeds = inCart && inCart.quantity > item.stock;
+                
                 grid.innerHTML += `
-                    <div class="menu-item ${isOut ? 'out-of-stock' : ''}">
+                    <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${cartExceeds ? 'stock-changed' : ''}">
                         <div class="item-image">
                             <img src="${item.image || 'https://placehold.co/400x300/333/d4af37?text=' + encodeURIComponent(item.name)}" 
                                  onerror="this.src='https://placehold.co/400x300/333/d4af37?text=${encodeURIComponent(item.name)}'">
                             ${item.discount > 0 ? `<div class="discount-badge">-${item.discount}%</div>` : ''}
-                            <div class="stock-badge ${isLow ? 'low' : ''}">${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}`}</div>
+                            <div class="stock-badge ${isLow ? 'low' : ''} ${cartExceeds ? 'error' : ''}">
+                                ${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}${cartExceeds ? ' ❌' : ''}`}
+                            </div>
                         </div>
                         <div class="item-content">
                             <div class="item-name">${item.name}</div>
@@ -492,9 +669,19 @@
             const item = menuItems.find(i => i.id === id);
             if (!item) return;
             
+            if (item.stock <= 0) {
+                flashNotify("Maaf, stok habis!");
+                return;
+            }
+            
             const existing = cart.find(c => c.id === id);
             if (existing) {
-                existing.quantity = Math.min(item.stock, existing.quantity + quantities[id]);
+                const newQty = existing.quantity + quantities[id];
+                if (newQty > item.stock) {
+                    flashNotify(`Stok tidak cukup! Tersedia: ${item.stock}, di keranjang: ${existing.quantity}`);
+                    return;
+                }
+                existing.quantity = newQty;
             } else {
                 cart.push({ 
                     id: item.id,
@@ -502,7 +689,7 @@
                     price: item.price,
                     discount: item.discount || 0,
                     image: item.image,
-                    quantity: quantities[id] 
+                    quantity: Math.min(quantities[id], item.stock)
                 });
             }
             saveCartToStorage();
@@ -526,7 +713,7 @@
             const item = cart.find(c => c.id === id);
             const menuItem = menuItems.find(m => m.id === id);
             
-            if (!item) return;
+            if (!item || !menuItem) return;
             
             const newQty = item.quantity + delta;
             
@@ -535,8 +722,8 @@
                 return;
             }
             
-            if (menuItem && newQty > menuItem.stock) {
-                flashNotify("Stok tidak mencukupi");
+            if (newQty > menuItem.stock) {
+                flashNotify(`Stok hanya tersedia ${menuItem.stock}`);
                 return;
             }
             
@@ -573,21 +760,39 @@
             } else {
                 list.innerHTML = '';
                 cart.forEach(item => {
+                    const currentItem = menuItems.find(m => m.id === item.id);
                     const price = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
                     const itemTotal = price * item.quantity;
                     grandTotal += itemTotal;
                     
+                    let stockStatusHtml = '';
+                    let itemClass = 'cart-item';
+                    
+                    if (!currentItem) {
+                        itemClass += ' error';
+                        stockStatusHtml = `<div class="stock-error">❌ Item tidak tersedia lagi</div>`;
+                    } else if (currentItem.stock <= 0) {
+                        itemClass += ' error';
+                        stockStatusHtml = `<div class="stock-error">❌ Stok habis</div>`;
+                    } else if (item.quantity > currentItem.stock) {
+                        itemClass += ' warning';
+                        stockStatusHtml = `<div class="stock-warning">⚠️ Stok tersisa: ${currentItem.stock}</div>`;
+                    } else if (currentItem.stock <= 5) {
+                        stockStatusHtml = `<div class="stock-warning">⚠️ Stok menipis: ${currentItem.stock}</div>`;
+                    }
+                    
                     list.innerHTML += `
-                        <div class="cart-item">
+                        <div class="${itemClass}">
                             <div class="cart-item-info">
                                 <div class="cart-item-name">${item.name}</div>
                                 <div class="cart-item-details">
                                     ${currencySymbol}${price.toLocaleString('id-ID')} / item
                                 </div>
+                                ${stockStatusHtml}
                                 <div class="cart-qty-control">
-                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, -1)">−</button>
+                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${!currentItem || currentItem.stock <= 0 ? 'disabled' : ''}>−</button>
                                     <span class="cart-qty-value">${item.quantity}</span>
-                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, 1)">+</button>
+                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${!currentItem || item.quantity >= currentItem.stock ? 'disabled' : ''}>+</button>
                                 </div>
                             </div>
                             <div class="cart-item-price">${currencySymbol}${itemTotal.toLocaleString('id-ID')}</div>
@@ -606,10 +811,17 @@
             document.getElementById('cartTotal').innerText = `Total: ${currencySymbol}${grandTotal.toLocaleString('id-ID')}`;
             
             const waBtn = document.getElementById('waSend');
-            waBtn.disabled = cart.length === 0;
+            waBtn.disabled = cart.length === 0 || !stockValidationResults.valid;
         }
 
         function sendToWA() {
+            // Final validation before sending
+            const isValid = validateCartStock();
+            if (!isValid) {
+                flashNotify("Periksa keranjang - ada perubahan stok!");
+                return;
+            }
+            
             const name = document.getElementById('customerName').value.trim();
             if (!name) return alert("Harap isi 'Atas Nama' terlebih dahulu!");
             if (cart.length === 0) return alert("Keranjang masih kosong!");
@@ -629,6 +841,7 @@
             
             window.open(`https://wa.me/${MY_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
             document.getElementById('cartModal').classList.remove('open');
+            document.getElementById('validationBanner').classList.remove('show');
         }
 
         function flashNotify(m) {
@@ -662,15 +875,25 @@
 
         // Event listeners
         document.getElementById('cartOpen').onclick = () => { 
+            isCartOpen = true;
+            validateCartStock(); // Validate when opening
             document.getElementById('cartModal').classList.add('open'); 
             renderCartModal(); 
         };
-        document.getElementById('cartClose').onclick = () => document.getElementById('cartModal').classList.remove('open');
+        
+        document.getElementById('cartClose').onclick = () => {
+            isCartOpen = false;
+            document.getElementById('cartModal').classList.remove('open');
+            document.getElementById('validationBanner').classList.remove('show');
+        };
+        
         document.getElementById('waSend').onclick = sendToWA;
 
         document.getElementById('cartModal').onclick = (e) => {
             if (e.target.id === 'cartModal') {
+                isCartOpen = false;
                 document.getElementById('cartModal').classList.remove('open');
+                document.getElementById('validationBanner').classList.remove('show');
             }
         };
 
