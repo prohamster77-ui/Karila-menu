@@ -15,6 +15,7 @@
             --border-color: rgba(212, 175, 55, 0.3);
             --danger: #c0392b;
             --warning: #e67e22;
+            --success: #27ae60;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,12 +51,13 @@
             display: inline-flex; align-items: center; margin-top: 15px;
             background: rgba(0,0,0,0.8); padding: 5px 12px; border-radius: 50px; 
             font-size: 0.75rem; border: 1px solid var(--border-color); color: var(--gold);
-            cursor: pointer;
+            cursor: pointer; transition: all 0.3s;
         }
-        .sync-status:hover { background: rgba(0,0,0,0.9); }
+        .sync-status:hover { background: rgba(0,0,0,0.9); transform: scale(1.05); }
         .dot { height: 6px; width: 6px; background-color: var(--gold); border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
         .dot.syncing { animation: spin 1s linear infinite; background-color: #fff; }
         .dot.error { background-color: var(--danger); animation: none; }
+        .dot.success { background-color: var(--success); animation: none; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -76,7 +78,8 @@
             border-radius: 16px; 
             overflow: hidden; 
             display: flex; flex-direction: column; 
-            transition: transform 0.3s, box-shadow 0.3s; 
+            transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; 
+            position: relative;
         }
         .menu-item:hover { 
             transform: translateY(-5px); 
@@ -87,13 +90,22 @@
             opacity: 0.6;
             filter: grayscale(0.5);
         }
+        .menu-item.stock-updated {
+            animation: highlightUpdate 1s ease;
+        }
+        @keyframes highlightUpdate {
+            0% { border-color: var(--success); box-shadow: 0 0 20px rgba(39, 174, 96, 0.5); }
+            100% { border-color: var(--border-color); box-shadow: none; }
+        }
         
         .item-image { width: 100%; height: 220px; background: #222; position: relative; }
         .item-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
         
         .discount-badge { position: absolute; top: 15px; right: 15px; background: #c0392b; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; z-index: 2; }
-        .stock-badge { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.85); color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2); z-index: 2; }
-        .stock-badge.low { background: rgba(192, 57, 43, 0.9); }
+        .stock-badge { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.85); color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2); z-index: 2; transition: all 0.3s; }
+        .stock-badge.low { background: rgba(192, 57, 43, 0.9); border-color: var(--danger); }
+        .stock-badge.changed { background: rgba(39, 174, 96, 0.9); border-color: var(--success); animation: badgePulse 0.5s ease 2; }
+        @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
         .item-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
         .item-name { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #fff; margin-bottom: 8px; }
@@ -103,7 +115,9 @@
         .now-price { font-size: 1.5rem; font-weight: 600; color: var(--gold); }
 
         .qty-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 8px; }
-        .qty-btn { width: 35px; height: 35px; border: none; background: transparent; color: #fff; cursor: pointer; font-size: 1.2rem; }
+        .qty-btn { width: 35px; height: 35px; border: none; background: transparent; color: #fff; cursor: pointer; font-size: 1.2rem; transition: all 0.2s; }
+        .qty-btn:hover:not(:disabled) { color: var(--gold); transform: scale(1.2); }
+        .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         
         .buy-btn { 
             width: 100%; padding: 15px; border: none; border-radius: 8px; 
@@ -111,7 +125,7 @@
             color: #000; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
             cursor: pointer; transition: 0.3s; 
         }
-        .buy-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .buy-btn:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-2px); }
         .buy-btn:disabled {
             background: #555;
             color: #888;
@@ -228,7 +242,7 @@
             justify-content: center;
             font-size: 0.9rem;
         }
-        .cart-qty-btn:hover {
+        .cart-qty-btn:hover:not(:disabled) {
             border-color: var(--gold);
             color: var(--gold);
         }
@@ -285,7 +299,7 @@
             font-size: 1.1rem; font-weight: bold; cursor: pointer; 
             transition: filter 0.3s;
         }
-        .wa-btn:hover { filter: brightness(1.1); }
+        .wa-btn:hover:not(:disabled) { filter: brightness(1.1); }
         .wa-btn:disabled {
             background: #555;
             cursor: not-allowed;
@@ -368,6 +382,29 @@
         }
         .refresh-indicator.show { display: flex; }
         .refresh-indicator.syncing { color: #fff; }
+
+        /* New: Stock update indicator */
+        .stock-update-toast {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(39, 174, 96, 0.95);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 998;
+            animation: slideInRight 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .stock-update-toast.show { display: flex; }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
@@ -375,6 +412,11 @@
     <div class="refresh-indicator" id="refreshIndicator">
         <span id="refreshIcon">🔄</span>
         <span id="refreshText">Updating stock...</span>
+    </div>
+
+    <div class="stock-update-toast" id="stockUpdateToast">
+        <span>📊</span>
+        <span id="stockUpdateText">Stock updated!</span>
     </div>
 
     <div class="container">
@@ -421,82 +463,145 @@
 
     <script>
         // ============================================
-        // CONFIG: REPLACE THIS WITH YOUR GOOGLE SHEET URL
+        // CONFIG: REPLACE THIS WITH YOUR WEB APP URL
         // ============================================
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpF3KDjN_dEBcNoYBve7zBxZOou6xHfTV2hT4E6wAfwgEUVeZ_fnLP0vJ6AjycCG3Evw6rxrGTgenc/pub?output=csv';
+        // Instructions to get this URL:
+        // 1. Open your Google Sheet
+        // 2. Go to Extensions → Apps Script
+        // 3. Paste the code from the setup instructions below
+        // 4. Deploy → New deployment → Web app
+        // 5. Copy the Web App URL and paste it here:
+        const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxOMqwtzJs56-I-Ep2RGhTlIk1ROWDGh8xhn6faa383FN-HvMJcJvbXutIKLveezYWf/exec';
         
         const MY_PHONE = "6282311981783"; 
-        const CART_STORAGE_KEY = 'karlia_cart';
-        const REFRESH_INTERVAL = 10000; // 10 seconds
+        const CART_STORAGE_KEY = 'karlia_cart_v2'; // Changed to force reset old cart
+        const REFRESH_INTERVAL = 5000; // 5 seconds - now actually works!
+        
         let menuItems = [], quantities = {}, currencySymbol = "Rp", lastFetchTime = null;
         let cart = [];
         let isCartOpen = false;
         let stockValidationResults = { valid: true, issues: [] };
+        let previousStockData = {}; // Track stock changes
+        let isFirstLoad = true;
 
-        // Parse CSV to JSON
-        function parseCSV(csvText) {
-            const lines = csvText.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-            const result = [];
-            
-            for (let i = 1; i < lines.length; i++) {
-                const currentline = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
-                const obj = {};
-                headers.forEach((header, index) => {
-                    let value = currentline[index] || '';
-                    if (['id', 'price', 'stock', 'discount'].includes(header)) {
-                        value = parseInt(value) || 0;
+        // ============================================
+        // GOOGLE APPS SCRIPT SETUP CODE (Copy this to Apps Script):
+        // ============================================
+        /*
+        function doGet(e) {
+            const lock = LockService.getScriptLock();
+            try {
+                lock.waitLock(10000);
+                
+                const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+                const data = sheet.getDataRange().getValues();
+                const headers = data[0].map(h => h.toString().trim().toLowerCase().replace(/\s+/g, '_'));
+                
+                const result = [];
+                for (let i = 1; i < data.length; i++) {
+                    if (!data[i][0]) continue; // Skip empty rows
+                    
+                    const row = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        let value = data[i][j];
+                        const header = headers[j];
+                        
+                        // Convert numeric fields
+                        if (['id', 'price', 'stock', 'discount'].includes(header)) {
+                            value = parseInt(value) || 0;
+                        }
+                        row[header] = value;
                     }
-                    obj[header] = value;
-                });
-                result.push(obj);
+                    result.push(row);
+                }
+                
+                // Return JSON with no-cache headers
+                const output = ContentService.createTextOutput(JSON.stringify(result));
+                output.setMimeType(ContentService.MimeType.JSON);
+                
+                return output;
+                
+            } catch (error) {
+                const output = ContentService.createTextOutput(JSON.stringify({error: error.toString()}));
+                output.setMimeType(ContentService.MimeType.JSON);
+                return output;
+            } finally {
+                lock.releaseLock();
             }
-            return result;
         }
+        */
 
         async function loadMenu(force = false) {
             const syncDot = document.getElementById('syncDot');
             const syncText = document.getElementById('syncText');
             const refreshIndicator = document.getElementById('refreshIndicator');
+            const refreshText = document.getElementById('refreshText');
             
             if (!force) {
-                syncDot.classList.add('syncing');
+                syncDot.className = 'dot syncing';
                 syncText.textContent = 'Syncing...';
                 refreshIndicator.classList.add('show', 'syncing');
+                refreshText.textContent = 'Checking stock...';
             }
             
             try {
-                const url = GOOGLE_SHEET_URL + '&t=' + Date.now();
-                const response = await fetch(url);
+                // Add cache-busting parameter - crucial for bypassing all caches
+                const url = GOOGLE_SHEET_URL + '?t=' + Date.now() + '&r=' + Math.random();
                 
-                if (!response.ok) throw new Error('Failed to fetch');
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    cache: 'no-store', // Prevent browser caching
+                    mode: 'cors' // Enable CORS
+                });
                 
-                const csvText = await response.text();
-                const data = parseCSV(csvText);
+                if (!response.ok) throw new Error('Failed to fetch: ' + response.status);
                 
+                const data = await response.json();
+                
+                if (data.error) throw new Error('Server error: ' + data.error);
+                if (!Array.isArray(data)) throw new Error('Invalid data format');
+                
+                // Detect stock changes
+                const stockChanges = detectStockChanges(data);
+                
+                // Update data
                 const oldMenuItems = [...menuItems];
                 menuItems = data.filter(item => item.id);
                 currencySymbol = "Rp";
                 
-                // Check for stock changes that affect cart
-                if (oldMenuItems.length > 0 && isCartOpen) {
-                    validateCartStock(true);
-                }
-                
-                // Update quantities for new items
+                // Initialize quantities for new items
                 menuItems.forEach(item => {
                     if (!quantities[item.id]) quantities[item.id] = 1;
                 });
                 
                 lastFetchTime = new Date();
                 updateLastUpdated();
+                
+                // Show stock update notification if changes detected
+                if (stockChanges.length > 0 && !isFirstLoad) {
+                    showStockUpdateToast(stockChanges);
+                }
+                isFirstLoad = false;
+                
+                // Validate cart if open
+                if (isCartOpen && oldMenuItems.length > 0) {
+                    validateCartStock(true);
+                }
+                
                 renderUI();
                 
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('errorState').style.display = 'none';
                 document.getElementById('menuGrid').style.display = 'grid';
                 
-                syncDot.classList.remove('error');
+                // Success indicator
+                syncDot.className = 'dot success';
+                setTimeout(() => {
+                    syncDot.className = 'dot';
+                }, 2000);
                 
             } catch (error) {
                 console.error('Error loading menu:', error);
@@ -504,15 +609,51 @@
                 document.getElementById('errorState').style.display = 'block';
                 document.getElementById('errorState').innerHTML = `
                     <strong>Gagal memuat menu</strong><br>
-                    Cek koneksi internet atau refresh halaman.<br>
-                    <small>${error.message}</small>
+                    ${error.message}<br><br>
+                    <small>Pastikan URL Web App sudah benar dan deployment masih aktif</small>
                 `;
-                syncDot.classList.add('error');
+                syncDot.className = 'dot error';
+                syncText.textContent = 'Error';
             } finally {
                 syncDot.classList.remove('syncing');
                 syncText.textContent = 'Live Stock';
-                setTimeout(() => refreshIndicator.classList.remove('show', 'syncing'), 500);
+                refreshIndicator.classList.remove('show', 'syncing');
             }
+        }
+
+        function detectStockChanges(newData) {
+            const changes = [];
+            
+            newData.forEach(newItem => {
+                const oldItem = previousStockData[newItem.id];
+                if (oldItem && oldItem.stock !== newItem.stock) {
+                    changes.push({
+                        name: newItem.name,
+                        oldStock: oldItem.stock,
+                        newStock: newItem.stock
+                    });
+                }
+                previousStockData[newItem.id] = { stock: newItem.stock, name: newItem.name };
+            });
+            
+            return changes;
+        }
+
+        function showStockUpdateToast(changes) {
+            const toast = document.getElementById('stockUpdateToast');
+            const text = document.getElementById('stockUpdateText');
+            
+            if (changes.length === 1) {
+                const change = changes[0];
+                const diff = change.newStock - change.oldStock;
+                const action = diff > 0 ? 'restocked' : 'sold out';
+                text.textContent = `${change.name}: ${change.oldStock} → ${change.newStock} ${action}`;
+            } else {
+                text.textContent = `${changes.length} items updated!`;
+            }
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         function updateLastUpdated() {
@@ -531,7 +672,7 @@
             flashNotify('Refreshing stock...');
         }
 
-        // Auto refresh every 10 seconds
+        // Auto refresh every 5 seconds (now actually works with Web App!)
         setInterval(() => loadMenu(false), REFRESH_INTERVAL);
 
         function validateCartStock(silent = false) {
@@ -542,7 +683,6 @@
                 const currentItem = menuItems.find(m => m.id === cartItem.id);
                 
                 if (!currentItem) {
-                    // Item no longer exists
                     stockValidationResults.issues.push({
                         type: 'removed',
                         item: cartItem,
@@ -551,7 +691,6 @@
                     stockValidationResults.valid = false;
                     hasChanges = true;
                 } else if (currentItem.stock <= 0) {
-                    // Item out of stock
                     stockValidationResults.issues.push({
                         type: 'outofstock',
                         item: cartItem,
@@ -561,7 +700,6 @@
                     stockValidationResults.valid = false;
                     hasChanges = true;
                 } else if (cartItem.quantity > currentItem.stock) {
-                    // Quantity exceeds stock
                     stockValidationResults.issues.push({
                         type: 'exceeds',
                         item: cartItem,
@@ -569,7 +707,7 @@
                         currentStock: currentItem.stock,
                         message: `${cartItem.name} melebihi stok (minta: ${cartItem.quantity}, tersedia: ${currentItem.stock})`
                     });
-                    cartItem.quantity = currentItem.stock; // Auto-adjust
+                    cartItem.quantity = currentItem.stock;
                     stockValidationResults.valid = false;
                     hasChanges = true;
                 }
@@ -597,7 +735,6 @@
             if (critical.length > 0) {
                 banner.className = 'validation-banner show';
                 text.innerHTML = `<strong>${critical.length} item tidak tersedia</strong> dan telah dihapus dari keranjang. Stok habis saat Anda memesan.`;
-                // Remove invalid items
                 const invalidIds = critical.map(i => i.item.id);
                 cart = cart.filter(c => !invalidIds.includes(c.id));
                 saveCartToStorage();
@@ -621,18 +758,21 @@
                 const isOut = item.stock <= 0;
                 const isLow = item.stock > 0 && item.stock <= 5;
                 
-                // Check if this item is in cart and exceeds stock
+                // Check if this item just had stock change
+                const prevItem = previousStockData[item.id];
+                const justChanged = prevItem && prevItem.stock !== item.stock;
+                
                 const inCart = cart.find(c => c.id === item.id);
                 const cartExceeds = inCart && inCart.quantity > item.stock;
                 
                 grid.innerHTML += `
-                    <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${cartExceeds ? 'stock-changed' : ''}">
+                    <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${justChanged ? 'stock-updated' : ''}">
                         <div class="item-image">
                             <img src="${item.image || 'https://placehold.co/400x300/333/d4af37?text=' + encodeURIComponent(item.name)}" 
                                  onerror="this.src='https://placehold.co/400x300/333/d4af37?text=${encodeURIComponent(item.name)}'">
                             ${item.discount > 0 ? `<div class="discount-badge">-${item.discount}%</div>` : ''}
-                            <div class="stock-badge ${isLow ? 'low' : ''} ${cartExceeds ? 'error' : ''}">
-                                ${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}${cartExceeds ? ' ❌' : ''}`}
+                            <div class="stock-badge ${isLow ? 'low' : ''} ${justChanged ? 'changed' : ''}">
+                                ${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}${justChanged ? ' ✨' : ''}`}
                             </div>
                         </div>
                         <div class="item-content">
@@ -815,7 +955,6 @@
         }
 
         function sendToWA() {
-            // Final validation before sending
             const isValid = validateCartStock();
             if (!isValid) {
                 flashNotify("Periksa keranjang - ada perubahan stok!");
@@ -851,7 +990,6 @@
             setTimeout(() => n.style.display = 'none', 2000);
         }
 
-        // Cart persistence
         function loadCartFromStorage() {
             try {
                 const savedCart = localStorage.getItem(CART_STORAGE_KEY);
@@ -876,7 +1014,7 @@
         // Event listeners
         document.getElementById('cartOpen').onclick = () => { 
             isCartOpen = true;
-            validateCartStock(); // Validate when opening
+            validateCartStock();
             document.getElementById('cartModal').classList.add('open'); 
             renderCartModal(); 
         };
