@@ -14,18 +14,17 @@
     --font-display: 'Playfair Display', serif;
     --font-body: 'Poppins', sans-serif;
 }
+
 .logo-container {
     position: fixed;
     top: 20px;
     left: 20px;
     z-index: 1000;
     transition: all 0.3s ease;
-
 }
 
 .logo-container:hover {
     transform: scale(1.05);
-
 }
 
 .logo-img {
@@ -39,7 +38,6 @@
 
 .log-img:hover {
     filter: drop-shadow(0 4px 15px rgba(212,175,55,0.4));
-
 }
 
 @media (max-width: 768px) {
@@ -52,6 +50,7 @@
         max-width: 120px;
     }
 }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body { 
@@ -74,6 +73,130 @@ body::before {
 }
 
 .container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+
+.container.locked {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Time Lock Overlay */
+.time-lock-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.time-lock-overlay.active {
+    display: flex;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.time-lock-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 500px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(0, 0, 0, 0.8) 100%);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    box-shadow: 0 0 50px rgba(212, 175, 55, 0.3);
+    animation: slideUp 0.6s ease;
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.time-lock-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: moonPulse 3s ease-in-out infinite;
+}
+
+@keyframes moonPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+.time-lock-content h2 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    color: var(--gold);
+    margin-bottom: 15px;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+}
+
+.time-lock-message {
+    font-size: 1.1rem;
+    color: #ccc;
+    line-height: 1.8;
+    margin-bottom: 25px;
+}
+
+.time-lock-message strong {
+    color: var(--gold);
+    font-size: 1.2rem;
+}
+
+.time-lock-countdown {
+    font-size: 1.3rem;
+    color: #fff;
+    background: rgba(212, 175, 55, 0.2);
+    padding: 15px 25px;
+    border-radius: 10px;
+    border: 1px solid var(--gold);
+    margin-bottom: 20px;
+    font-family: 'Courier New', monospace;
+}
+
+.time-lock-countdown span {
+    color: var(--gold);
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.current-time {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 10px;
+}
+
+/* Operational Hours Badge */
+.operational-hours {
+    margin-top: 15px;
+}
+
+.hours-badge {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
 
 /* Header */
 header { text-align: center; padding: 50px 0; }
@@ -165,10 +288,33 @@ header p {
     border: 2px solid white;
 }
 
+.menu-item.store-closed {
+    opacity: 0.5;
+}
+
 /* Item Image */
 .item-image { width: 100%; height: 240px; background: #222; position: relative; overflow: hidden; }
 .item-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
 .menu-item:hover .item-image img { transform: scale(1.1); }
+
+/* Closed Overlay on Image */
+.closed-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 3px;
+    z-index: 5;
+}
 
 /* Badges */
 .discount-badge { 
@@ -233,7 +379,12 @@ header p {
     filter: brightness(1.2); transform: translateY(-3px);
     box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
 }
-.buy-btn:disabled { background: #444; color: #777; cursor: not-allowed; }
+.buy-btn:disabled { 
+    background: #444; 
+    color: #777; 
+    cursor: not-allowed; 
+    position: relative;
+}
 
 /* Cart Trigger */
 .cart-trigger { 
@@ -364,7 +515,11 @@ header p {
     transition: all 0.3s; text-transform: uppercase;
 }
 .wa-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-3px); }
-.wa-btn:disabled { background: #444; cursor: not-allowed; }
+.wa-btn:disabled { 
+    background: #444; 
+    cursor: not-allowed;
+    color: #888;
+}
 
 .clear-cart-btn { 
     background: transparent; border: 2px solid #666;
@@ -421,9 +576,27 @@ header p {
     .cart-trigger { width: 65px; height: 65px; bottom: 20px; right: 20px; }
     .modal-body { width: 95%; padding: 20px; }
     header h1 { font-size: 2.5rem; }
+    
+    .time-lock-content {
+        margin: 20px;
+        padding: 30px 20px;
+    }
+    
+    .time-lock-content h2 {
+        font-size: 1.8rem;
+    }
+    
+    .time-lock-icon {
+        font-size: 3.5rem;
+    }
 }
 
 @media (max-width: 480px) {
     body { padding: 15px; }
     .item-image { height: 200px; }
+    
+    .hours-badge {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+    }
 }
