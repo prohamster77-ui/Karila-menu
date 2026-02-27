@@ -190,7 +190,7 @@ body::before {
     display: inline-block;
     background: rgba(212, 175, 55, 0.15);
     border: 1px solid var(--gold);
-    color: var(--gold);
+    color: var(--dark-glass);
     padding: 8px 16px;
     border-radius: 50px;
     font-size: 0.85rem;
