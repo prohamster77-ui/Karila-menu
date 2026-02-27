@@ -14,6 +14,23 @@
     <div class="logo-container">
         <img src="Logo.png" alt="Karila Logo" class="logo-img">
     </div>
+    
+    <!-- Time Lock Overlay -->
+    <div class="time-lock-overlay" id="timeLockOverlay">
+        <div class="time-lock-content">
+            <div class="time-lock-icon">🌙</div>
+            <h2>Toko Sedang Tutup</h2>
+            <p class="time-lock-message">
+                Mohon maaf, kami sedang tidak menerima pesanan.<br>
+                Jam operasional: <strong>07:00 - 22:30 WIB</strong>
+            </p>
+            <div class="time-lock-countdown" id="timeLockCountdown">
+                Buka kembali dalam: <span id="countdownTimer">--:--:--</span>
+            </div>
+            <div class="current-time" id="currentTimeDisplay"></div>
+        </div>
+    </div>
+
     <div class="refresh-indicator" id="refreshIndicator">
         <span id="refreshIcon">🔄</span>
         <span id="refreshText">Updating stock...</span>
@@ -33,6 +50,9 @@
                 <span id="syncText">Live Stock</span>
             </div>
             <div class="last-updated" id="lastUpdated"></div>
+            <div class="operational-hours" id="operationalHours">
+                <span class="hours-badge">🕐 Jam Operasional: 07:00 - 22:30 WIB</span>
+            </div>
         </header>
         
         <div id="loadingState" class="loading">Memuat menu...</div>
@@ -70,73 +90,150 @@
         // ============================================
         // CONFIG: REPLACE THIS WITH YOUR WEB APP URL
         // ============================================
-        // Instructions to get this URL:
-        // 1. Open your Google Sheet
-        // 2. Go to Extensions → Apps Script
-        // 3. Paste the code from the setup instructions below
-        // 4. Deploy → New deployment → Web app
-        // 5. Copy the Web App URL and paste it here:
         const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxOMqwtzJs56-I-Ep2RGhTlIk1ROWDGh8xhn6faa383FN-HvMJcJvbXutIKLveezYWf/exec';
         
         const MY_PHONE = "6282311981783"; 
-        const CART_STORAGE_KEY = 'karlia_cart_v2'; // Changed to force reset old cart
-        const REFRESH_INTERVAL = 5000; // 5 seconds - now actually works!
+        const CART_STORAGE_KEY = 'karlia_cart_v2';
+        const REFRESH_INTERVAL = 5000;
+        
+        // Time Lock Configuration (WIB/UTC+7)
+        const OPEN_HOUR = 7;    // 07:00 AM
+        const OPEN_MINUTE = 0;
+        const CLOSE_HOUR = 22;  // 22:30 (10:30 PM)
+        const CLOSE_MINUTE = 30;
         
         let menuItems = [], quantities = {}, currencySymbol = "Rp", lastFetchTime = null;
         let cart = [];
         let isCartOpen = false;
         let stockValidationResults = { valid: true, issues: [] };
-        let previousStockData = {}; // Track stock changes
+        let previousStockData = {};
         let isFirstLoad = true;
+        let timeCheckInterval = null;
 
         // ============================================
-        // GOOGLE APPS SCRIPT SETUP CODE (Copy this to Apps Script):
+        // TIME LOCK FUNCTIONS
         // ============================================
-        /*
-        function doGet(e) {
-            const lock = LockService.getScriptLock();
-            try {
-                lock.waitLock(10000);
+        
+        function getCurrentWIBTime() {
+            // Create date in WIB (UTC+7)
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const wibTime = new Date(utc + (3600000 * 7));
+            return wibTime;
+        }
+        
+        function isStoreOpen() {
+            const wibTime = getCurrentWIBTime();
+            const currentHour = wibTime.getHours();
+            const currentMinute = wibTime.getMinutes();
+            const currentTime = currentHour * 60 + currentMinute;
+            const openTime = OPEN_HOUR * 60 + OPEN_MINUTE;
+            const closeTime = CLOSE_HOUR * 60 + CLOSE_MINUTE;
+            
+            return currentTime >= openTime && currentTime < closeTime;
+        }
+        
+        function getTimeUntilOpen() {
+            const wibTime = getCurrentWIBTime();
+            const currentHour = wibTime.getHours();
+            const currentMinute = wibTime.getMinutes();
+            const currentSecond = wibTime.getSeconds();
+            const currentTime = currentHour * 60 + currentMinute;
+            const openTime = OPEN_HOUR * 60 + OPEN_MINUTE;
+            const closeTime = CLOSE_HOUR * 60 + CLOSE_MINUTE;
+            
+            let targetHour, targetMinute;
+            
+            if (currentTime >= closeTime) {
+                // After closing time, wait until tomorrow 7:00 AM
+                targetHour = OPEN_HOUR;
+                targetMinute = OPEN_MINUTE;
+            } else if (currentTime < openTime) {
+                // Before opening time today
+                targetHour = OPEN_HOUR;
+                targetMinute = OPEN_MINUTE;
+            } else {
+                return null; // Store is open
+            }
+            
+            let remainingSeconds = ((targetHour - currentHour) * 3600) + 
+                                   ((targetMinute - currentMinute) * 60) - 
+                                   currentSecond;
+            
+            if (remainingSeconds < 0) {
+                remainingSeconds += 24 * 3600; // Add 24 hours if next day
+            }
+            
+            const hours = Math.floor(remainingSeconds / 3600);
+            const minutes = Math.floor((remainingSeconds % 3600) / 60);
+            const seconds = remainingSeconds % 60;
+            
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        function updateTimeLockDisplay() {
+            const overlay = document.getElementById('timeLockOverlay');
+            const countdownEl = document.getElementById('countdownTimer');
+            const currentTimeEl = document.getElementById('currentTimeDisplay');
+            const container = document.querySelector('.container');
+            const cartTrigger = document.getElementById('cartOpen');
+            
+            const wibTime = getCurrentWIBTime();
+            const timeString = wibTime.toLocaleTimeString('id-ID', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short'
+            });
+            
+            currentTimeEl.textContent = `Waktu sekarang: ${timeString} (WIB)`;
+            
+            if (!isStoreOpen()) {
+                overlay.classList.add('active');
+                container.classList.add('locked');
+                cartTrigger.style.display = 'none';
                 
-                const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-                const data = sheet.getDataRange().getValues();
-                const headers = data[0].map(h => h.toString().trim().toLowerCase().replace(/\s+/g, '_'));
-                
-                const result = [];
-                for (let i = 1; i < data.length; i++) {
-                    if (!data[i][0]) continue; // Skip empty rows
-                    
-                    const row = {};
-                    for (let j = 0; j < headers.length; j++) {
-                        let value = data[i][j];
-                        const header = headers[j];
-                        
-                        // Convert numeric fields
-                        if (['id', 'price', 'stock', 'discount'].includes(header)) {
-                            value = parseInt(value) || 0;
-                        }
-                        row[header] = value;
-                    }
-                    result.push(row);
+                const countdown = getTimeUntilOpen();
+                if (countdown) {
+                    countdownEl.textContent = countdown;
                 }
-                
-                // Return JSON with no-cache headers
-                const output = ContentService.createTextOutput(JSON.stringify(result));
-                output.setMimeType(ContentService.MimeType.JSON);
-                
-                return output;
-                
-            } catch (error) {
-                const output = ContentService.createTextOutput(JSON.stringify({error: error.toString()}));
-                output.setMimeType(ContentService.MimeType.JSON);
-                return output;
-            } finally {
-                lock.releaseLock();
+                return false;
+            } else {
+                overlay.classList.remove('active');
+                container.classList.remove('locked');
+                cartTrigger.style.display = 'flex';
+                return true;
             }
         }
-        */
+        
+        function startTimeLockCheck() {
+            updateTimeLockDisplay();
+            timeCheckInterval = setInterval(() => {
+                const wasOpen = !document.getElementById('timeLockOverlay').classList.contains('active');
+                const isOpen = updateTimeLockDisplay();
+                
+                // If store just closed while user was browsing
+                if (wasOpen && !isOpen) {
+                    flashNotify("⚠️ Toko sudah tutup! Sampai jumpa besok.");
+                    // Close cart modal if open
+                    if (isCartOpen) {
+                        document.getElementById('cartModal').classList.remove('open');
+                        isCartOpen = false;
+                    }
+                }
+            }, 1000); // Check every second
+        }
 
+        // ============================================
+        // GOOGLE APPS SCRIPT SETUP CODE
+        // ============================================
+        
         async function loadMenu(force = false) {
+            // Check if store is open first
+            if (!isStoreOpen() && !force) {
+                return; // Don't load if closed (unless forced)
+            }
+            
             const syncDot = document.getElementById('syncDot');
             const syncText = document.getElementById('syncText');
             const refreshIndicator = document.getElementById('refreshIndicator');
@@ -150,7 +247,6 @@
             }
             
             try {
-                // Add cache-busting parameter - crucial for bypassing all caches
                 const url = GOOGLE_SHEET_URL + '?t=' + Date.now() + '&r=' + Math.random();
                 
                 const response = await fetch(url, {
@@ -158,8 +254,8 @@
                     headers: {
                         'Accept': 'application/json',
                     },
-                    cache: 'no-store', // Prevent browser caching
-                    mode: 'cors' // Enable CORS
+                    cache: 'no-store',
+                    mode: 'cors'
                 });
                 
                 if (!response.ok) throw new Error('Failed to fetch: ' + response.status);
@@ -169,15 +265,12 @@
                 if (data.error) throw new Error('Server error: ' + data.error);
                 if (!Array.isArray(data)) throw new Error('Invalid data format');
                 
-                // Detect stock changes
                 const stockChanges = detectStockChanges(data);
                 
-                // Update data
                 const oldMenuItems = [...menuItems];
                 menuItems = data.filter(item => item.id);
                 currencySymbol = "Rp";
                 
-                // Initialize quantities for new items
                 menuItems.forEach(item => {
                     if (!quantities[item.id]) quantities[item.id] = 1;
                 });
@@ -185,13 +278,11 @@
                 lastFetchTime = new Date();
                 updateLastUpdated();
                 
-                // Show stock update notification if changes detected
                 if (stockChanges.length > 0 && !isFirstLoad) {
                     showStockUpdateToast(stockChanges);
                 }
                 isFirstLoad = false;
                 
-                // Validate cart if open
                 if (isCartOpen && oldMenuItems.length > 0) {
                     validateCartStock(true);
                 }
@@ -202,7 +293,6 @@
                 document.getElementById('errorState').style.display = 'none';
                 document.getElementById('menuGrid').style.display = 'grid';
                 
-                // Success indicator
                 syncDot.className = 'dot success';
                 setTimeout(() => {
                     syncDot.className = 'dot';
@@ -273,12 +363,20 @@
         }
 
         function forceRefresh() {
+            if (!isStoreOpen()) {
+                flashNotify("Toko sedang tutup. Tidak dapat refresh.");
+                return;
+            }
             loadMenu(true);
             flashNotify('Refreshing stock...');
         }
 
-        // Auto refresh every 5 seconds (now actually works with Web App!)
-        setInterval(() => loadMenu(false), REFRESH_INTERVAL);
+        // Auto refresh every 5 seconds (only when store is open)
+        setInterval(() => {
+            if (isStoreOpen()) {
+                loadMenu(false);
+            }
+        }, REFRESH_INTERVAL);
 
         function validateCartStock(silent = false) {
             stockValidationResults = { valid: true, issues: [] };
@@ -363,15 +461,17 @@
                 const isOut = item.stock <= 0;
                 const isLow = item.stock > 0 && item.stock <= 5;
                 
-                // Check if this item just had stock change
                 const prevItem = previousStockData[item.id];
                 const justChanged = prevItem && prevItem.stock !== item.stock;
                 
                 const inCart = cart.find(c => c.id === item.id);
                 const cartExceeds = inCart && inCart.quantity > item.stock;
                 
+                // Check if store is open for button state
+                const storeOpen = isStoreOpen();
+                
                 grid.innerHTML += `
-                    <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${justChanged ? 'stock-updated' : ''}">
+                    <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${justChanged ? 'stock-updated' : ''} ${!storeOpen ? 'store-closed' : ''}">
                         <div class="item-image">
                             <img src="${item.image || 'https://placehold.co/400x300/333/d4af37?text=' + encodeURIComponent(item.name)}" 
                                  onerror="this.src='https://placehold.co/400x300/333/d4af37?text=${encodeURIComponent(item.name)}'">
@@ -379,6 +479,7 @@
                             <div class="stock-badge ${isLow ? 'low' : ''} ${justChanged ? 'changed' : ''}">
                                 ${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}${justChanged ? ' ✨' : ''}`}
                             </div>
+                            ${!storeOpen ? '<div class="closed-overlay">TUTUP</div>' : ''}
                         </div>
                         <div class="item-content">
                             <div class="item-name">${item.name}</div>
@@ -388,12 +489,12 @@
                                 ${item.discount > 0 ? `<span style="text-decoration: line-through; color: #888; font-size: 0.9rem;">${currencySymbol}${item.price.toLocaleString('id-ID')}</span>` : ''}
                             </div>
                             <div class="qty-box">
-                                <button class="qty-btn" onclick="changeQty(${item.id}, -1)" ${isOut ? 'disabled' : ''}>−</button>
+                                <button class="qty-btn" onclick="changeQty(${item.id}, -1)" ${isOut || !storeOpen ? 'disabled' : ''}>−</button>
                                 <span id="qty-val-${item.id}" style="font-weight:bold">${quantities[item.id]}</span>
-                                <button class="qty-btn" onclick="changeQty(${item.id}, 1)" ${isOut ? 'disabled' : ''}>+</button>
+                                <button class="qty-btn" onclick="changeQty(${item.id}, 1)" ${isOut || !storeOpen ? 'disabled' : ''}>+</button>
                             </div>
-                            <button class="buy-btn" onclick="addToCart(${item.id})" ${isOut ? 'disabled' : ''}>
-                                ${isOut ? 'Habis' : 'Tambah Pesanan'}
+                            <button class="buy-btn" onclick="addToCart(${item.id})" ${isOut || !storeOpen ? 'disabled' : ''}>
+                                ${!storeOpen ? 'Toko Tutup' : (isOut ? 'Habis' : 'Tambah Pesanan')}
                             </button>
                         </div>
                     </div>`;
@@ -401,6 +502,12 @@
         }
 
         function changeQty(id, delta) {
+            // Check store hours first
+            if (!isStoreOpen()) {
+                flashNotify("Toko sedang tutup!");
+                return;
+            }
+            
             const item = menuItems.find(i => i.id === id);
             if (!item) return;
             const next = quantities[id] + delta;
@@ -411,6 +518,12 @@
         }
 
         function addToCart(id) {
+            // Double check store hours
+            if (!isStoreOpen()) {
+                flashNotify("Maaf, toko sedang tutup!");
+                return;
+            }
+            
             const item = menuItems.find(i => i.id === id);
             if (!item) return;
             
@@ -455,6 +568,14 @@
         }
 
         function updateCartQuantity(id, delta) {
+            // Check store hours
+            if (!isStoreOpen()) {
+                flashNotify("Toko sedang tutup!");
+                document.getElementById('cartModal').classList.remove('open');
+                isCartOpen = false;
+                return;
+            }
+            
             const item = cart.find(c => c.id === id);
             const menuItem = menuItems.find(m => m.id === id);
             
@@ -526,6 +647,8 @@
                         stockStatusHtml = `<div class="stock-warning">⚠️ Stok menipis: ${currentItem.stock}</div>`;
                     }
                     
+                    const storeOpen = isStoreOpen();
+                    
                     list.innerHTML += `
                         <div class="${itemClass}">
                             <div class="cart-item-info">
@@ -535,9 +658,9 @@
                                 </div>
                                 ${stockStatusHtml}
                                 <div class="cart-qty-control">
-                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${!currentItem || currentItem.stock <= 0 ? 'disabled' : ''}>−</button>
+                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${!currentItem || currentItem.stock <= 0 || !storeOpen ? 'disabled' : ''}>−</button>
                                     <span class="cart-qty-value">${item.quantity}</span>
-                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${!currentItem || item.quantity >= currentItem.stock ? 'disabled' : ''}>+</button>
+                                    <button class="cart-qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${!currentItem || item.quantity >= currentItem.stock || !storeOpen ? 'disabled' : ''}>+</button>
                                 </div>
                             </div>
                             <div class="cart-item-price">${currencySymbol}${itemTotal.toLocaleString('id-ID')}</div>
@@ -556,10 +679,23 @@
             document.getElementById('cartTotal').innerText = `Total: ${currencySymbol}${grandTotal.toLocaleString('id-ID')}`;
             
             const waBtn = document.getElementById('waSend');
-            waBtn.disabled = cart.length === 0 || !stockValidationResults.valid;
+            const storeOpen = isStoreOpen();
+            waBtn.disabled = cart.length === 0 || !stockValidationResults.valid || !storeOpen;
+            
+            if (!storeOpen) {
+                waBtn.textContent = "Toko Tutup - Buka 07:00 WIB";
+            } else {
+                waBtn.textContent = "Konfirmasi Pesanan via WhatsApp";
+            }
         }
 
         function sendToWA() {
+            // Final check - cannot order if store is closed
+            if (!isStoreOpen()) {
+                flashNotify("Toko sedang tutup! Tidak dapat memesan.");
+                return;
+            }
+            
             const isValid = validateCartStock();
             if (!isValid) {
                 flashNotify("Periksa keranjang - ada perubahan stok!");
@@ -618,6 +754,10 @@
 
         // Event listeners
         document.getElementById('cartOpen').onclick = () => { 
+            if (!isStoreOpen()) {
+                flashNotify("Toko sedang tutup!");
+                return;
+            }
             isCartOpen = true;
             validateCartStock();
             document.getElementById('cartModal').classList.add('open'); 
@@ -642,7 +782,10 @@
 
         // Initialize
         loadCartFromStorage();
-        loadMenu();
+        startTimeLockCheck(); // Start time check first
+        if (isStoreOpen()) {
+            loadMenu();
+        }
     </script>
 </body>
 </html>
