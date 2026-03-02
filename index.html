@@ -8,6 +8,10 @@
     
    <link rel="stylesheet" href="style.css">
    
+   <!-- Firebase SDK -->
+   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+   
 </head>
 <body>
 
@@ -88,7 +92,24 @@
 
     <script>
         // ============================================
-        // CONFIG: REPLACE THIS WITH YOUR WEB APP URL
+        // FIREBASE CONFIG - PUNYA KAMU
+        // ============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCm9z470vzpk4CfW50T1RQjYeTY3pImwZ4",
+            authDomain: "karila-order-notification.firebaseapp.com",
+            databaseURL: "https://karila-order-notification-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "karila-order-notification",
+            storageBucket: "karila-order-notification.firebasestorage.app",
+            messagingSenderId: "68488198197",
+            appId: "1:68488198197:web:b5986fafd41a2c9666197c"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // ============================================
+        // CONFIG: GOOGLE SHEET URL
         // ============================================
         const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWrShK8tKGNxDTlnUy4MKpcwzKsyaFAHVfjZ5nhVhyLH7YriGUghdvVQdsMxT9qOjr/exec';
         
@@ -109,13 +130,80 @@
         let previousStockData = {};
         let isFirstLoad = true;
         let timeCheckInterval = null;
+        let myOrderIds = new Set(); // Track order sendiri biar ga notif
+
+        // ============================================
+        // FIREBASE: Listen Order Baru (Global Notif)
+        // ============================================
+        function initFirebaseListener() {
+            db.ref('orders').on('child_added', (snapshot) => {
+                const order = snapshot.val();
+                const orderId = snapshot.key;
+                
+                // Skip kalau ini order sendiri
+                if (myOrderIds.has(orderId)) return;
+                
+                // Skip kalau order lebih dari 10 detik yang lalu (pas pertama load)
+                if (Date.now() - order.timestamp > 10000) return;
+                
+                showGlobalNotification(order);
+            });
+        }
+
+        function showGlobalNotification(order) {
+            const notif = document.createElement('div');
+            notif.className = 'global-notif';
+            notif.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px; font-size: 1rem;">
+                    🎉 Order Baru Masuk!
+                </div>
+                <div style="font-size: 0.9rem; margin-bottom: 3px;">
+                    <strong>${order.customer}</strong> baru order
+                </div>
+                <div style="font-size: 0.85rem; color: #333;">
+                    ${order.items ? order.items.length : 1} item • Rp ${order.total ? order.total.toLocaleString('id-ID') : '-'}
+                </div>
+                <div style="font-size: 0.7rem; margin-top: 8px; opacity: 0.7;">
+                    ${new Date(order.timestamp).toLocaleTimeString('id-ID')}
+                </div>
+            `;
+            
+            document.body.appendChild(notif);
+            
+            // Suara notif (optional)
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(e => console.log('Audio blocked'));
+            
+            // Hilang setelah 6 detik
+            setTimeout(() => {
+                notif.style.animation = 'slideOut 0.5s ease';
+                setTimeout(() => notif.remove(), 500);
+            }, 6000);
+        }
+
+        function saveOrderToFirebase(orderData) {
+            const newOrderRef = db.ref('orders').push();
+            const orderId = newOrderRef.key;
+            
+            // Track order sendiri biar ga notif ke diri sendiri
+            myOrderIds.add(orderId);
+            
+            newOrderRef.set({
+                ...orderData,
+                timestamp: Date.now(),
+                status: 'new'
+            });
+            
+            // Hapus dari tracking setelah 10 detik
+            setTimeout(() => myOrderIds.delete(orderId), 10000);
+        }
 
         // ============================================
         // TIME LOCK FUNCTIONS
         // ============================================
         
         function getCurrentWIBTime() {
-            // Create date in WIB (UTC+7)
             const now = new Date();
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
             const wibTime = new Date(utc + (3600000 * 7));
@@ -145,15 +233,13 @@
             let targetHour, targetMinute;
             
             if (currentTime >= closeTime) {
-                // After closing time, wait until tomorrow 7:00 AM
                 targetHour = OPEN_HOUR;
                 targetMinute = OPEN_MINUTE;
             } else if (currentTime < openTime) {
-                // Before opening time today
                 targetHour = OPEN_HOUR;
                 targetMinute = OPEN_MINUTE;
             } else {
-                return null; // Store is open
+                return null;
             }
             
             let remainingSeconds = ((targetHour - currentHour) * 3600) + 
@@ -161,7 +247,7 @@
                                    currentSecond;
             
             if (remainingSeconds < 0) {
-                remainingSeconds += 24 * 3600; // Add 24 hours if next day
+                remainingSeconds += 24 * 3600;
             }
             
             const hours = Math.floor(remainingSeconds / 3600);
@@ -212,26 +298,23 @@
                 const wasOpen = !document.getElementById('timeLockOverlay').classList.contains('active');
                 const isOpen = updateTimeLockDisplay();
                 
-                // If store just closed while user was browsing
                 if (wasOpen && !isOpen) {
                     flashNotify("⚠️ Toko sudah tutup! Sampai jumpa besok.");
-                    // Close cart modal if open
                     if (isCartOpen) {
                         document.getElementById('cartModal').classList.remove('open');
                         isCartOpen = false;
                     }
                 }
-            }, 1000); // Check every second
+            }, 1000);
         }
 
         // ============================================
-        // GOOGLE APPS SCRIPT SETUP CODE
+        // GOOGLE SHEET FUNCTIONS
         // ============================================
         
         async function loadMenu(force = false) {
-            // Check if store is open first
             if (!isStoreOpen() && !force) {
-                return; // Don't load if closed (unless forced)
+                return;
             }
             
             const syncDot = document.getElementById('syncDot');
@@ -371,7 +454,6 @@
             flashNotify('Refreshing stock...');
         }
 
-        // Auto refresh every 5 seconds (only when store is open)
         setInterval(() => {
             if (isStoreOpen()) {
                 loadMenu(false);
@@ -465,16 +547,14 @@
                 const justChanged = prevItem && prevItem.stock !== item.stock;
                 
                 const inCart = cart.find(c => c.id === item.id);
-                const cartExceeds = inCart && inCart.quantity > item.stock;
                 
-                // Check if store is open for button state
                 const storeOpen = isStoreOpen();
                 
                 grid.innerHTML += `
                     <div class="menu-item ${isOut ? 'out-of-stock' : ''} ${justChanged ? 'stock-updated' : ''} ${!storeOpen ? 'store-closed' : ''}">
                         <div class="item-image">
                             <img src="${item.image || 'https://placehold.co/400x300/333/d4af37?text=' + encodeURIComponent(item.name)}" 
-                                 onerror="this.src='https://placehold.co/400x300/333/d4af37?text=${encodeURIComponent(item.name)}'">
+                                 onerror="this.src='https://placehold.co/400x300/333/d4af37?text=' + encodeURIComponent(item.name)">
                             ${item.discount > 0 ? `<div class="discount-badge">-${item.discount}%</div>` : ''}
                             <div class="stock-badge ${isLow ? 'low' : ''} ${justChanged ? 'changed' : ''}">
                                 ${isOut ? 'Sold Out' : `Stok: ${item.stock}${isLow ? ' ⚠️' : ''}${justChanged ? ' ✨' : ''}`}
@@ -502,7 +582,6 @@
         }
 
         function changeQty(id, delta) {
-            // Check store hours first
             if (!isStoreOpen()) {
                 flashNotify("Toko sedang tutup!");
                 return;
@@ -518,7 +597,6 @@
         }
 
         function addToCart(id) {
-            // Double check store hours
             if (!isStoreOpen()) {
                 flashNotify("Maaf, toko sedang tutup!");
                 return;
@@ -568,7 +646,6 @@
         }
 
         function updateCartQuantity(id, delta) {
-            // Check store hours
             if (!isStoreOpen()) {
                 flashNotify("Toko sedang tutup!");
                 document.getElementById('cartModal').classList.remove('open');
@@ -690,7 +767,6 @@
         }
 
         function sendToWA() {
-            // Final check - cannot order if store is closed
             if (!isStoreOpen()) {
                 flashNotify("Toko sedang tutup! Tidak dapat memesan.");
                 return;
@@ -708,12 +784,26 @@
 
             let msg = `*PESANAN BARU - KARILA* 🐺\n--------------------------\n*Atas Nama:* ${name}\n--------------------------\n`;
             let total = 0;
+            const items = [];
+            
             cart.forEach(item => {
                 const p = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
                 total += p * item.quantity;
+                items.push({ name: item.name, qty: item.quantity, price: p });
                 msg += `• *${item.name}* (x${item.quantity})\n`;
             });
+            
             msg += `\n--------------------------\n*TOTAL: ${currencySymbol}${total.toLocaleString('id-ID')}*`;
+            
+            // Simpan ke Firebase (trigger notif global)
+            const orderData = {
+                customer: name,
+                items: items,
+                total: total,
+                timestamp: Date.now(),
+                phone: MY_PHONE
+            };
+            saveOrderToFirebase(orderData);
             
             cart = [];
             saveCartToStorage();
@@ -782,7 +872,9 @@
 
         // Initialize
         loadCartFromStorage();
-        startTimeLockCheck(); // Start time check first
+        startTimeLockCheck();
+        initFirebaseListener(); // Start listening for orders
+        
         if (isStoreOpen()) {
             loadMenu();
         }
