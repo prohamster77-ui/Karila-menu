@@ -8,10 +8,24 @@
     
    <link rel="stylesheet" href="style.css">
    
-   <!-- Firebase SDK -->
    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
    
+   <style>
+       /* Tambahan style untuk metode pembayaran yang dinonaktifkan */
+       .payment-option.disabled {
+           opacity: 0.5;
+           cursor: not-allowed;
+           filter: grayscale(1);
+       }
+       .payment-error-note {
+           color: #ff4d4d;
+           font-size: 0.75rem;
+           margin-top: 5px;
+           display: block;
+           font-weight: 600;
+       }
+   </style>
 </head>
 <body>
 
@@ -19,7 +33,6 @@
         <img src="Logo.png" alt="Karila Logo" class="logo-img">
     </div>
     
-    <!-- Time Lock Overlay -->
     <div class="time-lock-overlay" id="timeLockOverlay">
         <div class="time-lock-content">
             <div class="time-lock-icon">🌙</div>
@@ -88,6 +101,69 @@
         </div>
     </div>
 
+    <div class="modal" id="paymentModal">
+        <div class="modal-body">
+            <span class="close-x" id="paymentClose">&times;</span>
+            <h2 style="margin-bottom: 20px; font-family: 'Playfair Display'; color: var(--gold);">Detail Pesanan</h2>
+            
+            <div class="payment-section">
+                <label class="section-label">Metode Pembayaran</label>
+                <div class="payment-options">
+                    <label class="payment-option disabled">
+                        <input type="radio" name="paymentMethod" value="QRIS" disabled>
+                        <span class="payment-card">
+                            <span class="payment-icon">📱</span>
+                            <span class="payment-text">QRIS</span>
+                            <span class="payment-desc">Scan & Pay</span>
+                            <span class="payment-error-note">⚠️ Sedang Error</span>
+                        </span>
+                    </label>
+                    <label class="payment-option">
+                        <input type="radio" name="paymentMethod" value="Cash" checked>
+                        <span class="payment-card">
+                            <span class="payment-icon">💵</span>
+                            <span class="payment-text">Cash</span>
+                            <span class="payment-desc">Bayar di Tempat</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pickup-section">
+                <label class="section-label">Tanggal Pengambilan</label>
+                <div class="date-options" id="dateOptions">
+                    </div>
+            </div>
+
+            <div class="pickup-section">
+                <label class="section-label">Waktu Pengambilan</label>
+                <div class="time-options">
+                    <label class="time-option">
+                        <input type="radio" name="pickupTime" value="Lunch" checked>
+                        <span class="time-card">
+                            <span class="time-icon">🍽️</span>
+                            <span class="time-text">Lunch</span>
+                        </span>
+                    </label>
+                    <label class="time-option">
+                        <input type="radio" name="pickupTime" value="Break">
+                        <span class="time-card">
+                            <span class="time-icon">☕</span>
+                            <span class="time-text">Break</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="order-summary" id="orderSummary">
+                </div>
+
+            <button class="wa-btn" id="confirmOrderBtn" style="margin-top: 20px;">
+                Konfirmasi & Kirim ke WhatsApp
+            </button>
+        </div>
+    </div>
+
     <div id="notify" class="notify"></div>
 
     <script>
@@ -130,7 +206,7 @@
         let previousStockData = {};
         let isFirstLoad = true;
         let timeCheckInterval = null;
-        let myOrderIds = new Set(); // Track order sendiri biar ga notif
+        let myOrderIds = new Set();
 
         // ============================================
         // FIREBASE: Listen Order Baru (Global Notif)
@@ -140,10 +216,7 @@
                 const order = snapshot.val();
                 const orderId = snapshot.key;
                 
-                // Skip kalau ini order sendiri
                 if (myOrderIds.has(orderId)) return;
-                
-                // Skip kalau order lebih dari 10 detik yang lalu (pas pertama load)
                 if (Date.now() - order.timestamp > 10000) return;
                 
                 showGlobalNotification(order);
@@ -170,12 +243,10 @@
             
             document.body.appendChild(notif);
             
-            // Suara notif (optional)
             const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
             audio.volume = 0.3;
             audio.play().catch(e => console.log('Audio blocked'));
             
-            // Hilang setelah 6 detik
             setTimeout(() => {
                 notif.style.animation = 'slideOut 0.5s ease';
                 setTimeout(() => notif.remove(), 500);
@@ -186,7 +257,6 @@
             const newOrderRef = db.ref('orders').push();
             const orderId = newOrderRef.key;
             
-            // Track order sendiri biar ga notif ke diri sendiri
             myOrderIds.add(orderId);
             
             newOrderRef.set({
@@ -195,8 +265,106 @@
                 status: 'new'
             });
             
-            // Hapus dari tracking setelah 10 detik
             setTimeout(() => myOrderIds.delete(orderId), 10000);
+        }
+
+        // ============================================
+        // DATE & TIME SELECTION FUNCTIONS
+        // ============================================
+        
+        function getNextWeekDates() {
+            const dates = [];
+            const today = new Date();
+            const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Find next Monday
+            let daysUntilMonday = (1 - currentDay + 7) % 7;
+            if (daysUntilMonday === 0) daysUntilMonday = 7; // If today is Monday, go to next Monday
+            
+            const nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + daysUntilMonday);
+            
+            // Generate Mon-Fri
+            const dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+            
+            for (let i = 0; i < 5; i++) {
+                const date = new Date(nextMonday);
+                date.setDate(nextMonday.getDate() + i);
+                
+                dates.push({
+                    dayName: dayNames[i],
+                    date: date,
+                    dateString: date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    value: date.toISOString().split('T')[0]
+                });
+            }
+            
+            return dates;
+        }
+
+        function renderDateOptions() {
+            const container = document.getElementById('dateOptions');
+            const dates = getNextWeekDates();
+            
+            container.innerHTML = dates.map((d, index) => `
+                <label class="date-option">
+                    <input type="radio" name="pickupDate" value="${d.value}" ${index === 0 ? 'checked' : ''}>
+                    <span class="date-card">
+                        <span class="date-day">${d.dayName}</span>
+                        <span class="date-date">${d.dateString}</span>
+                    </span>
+                </label>
+            `).join('');
+        }
+
+        function getSelectedOrderDetails() {
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Cash';
+            const pickupDate = document.querySelector('input[name="pickupDate"]:checked')?.value;
+            const pickupTime = document.querySelector('input[name="pickupTime"]:checked')?.value || 'Lunch';
+            
+            const dateObj = getNextWeekDates().find(d => d.value === pickupDate);
+            
+            return {
+                paymentMethod,
+                pickupDate: dateObj?.dateString || pickupDate,
+                pickupDay: dateObj?.dayName || '',
+                pickupTime
+            };
+        }
+
+        function updateOrderSummary() {
+            const details = getSelectedOrderDetails();
+            let total = 0;
+            
+            cart.forEach(item => {
+                const p = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
+                total += p * item.quantity;
+            });
+            
+            const summary = document.getElementById('orderSummary');
+            summary.innerHTML = `
+                <div class="summary-title">Ringkasan Pesanan</div>
+                <div class="summary-row">
+                    <span>Total Item:</span>
+                    <span>${cart.reduce((a, b) => a + b.quantity, 0)} item</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Harga:</span>
+                    <span class="summary-price">Rp ${total.toLocaleString('id-ID')}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Pembayaran:</span>
+                    <span class="summary-highlight">${details.paymentMethod}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Pengambilan:</span>
+                    <span class="summary-highlight">${details.pickupDay}, ${details.pickupDate}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Waktu:</span>
+                    <span class="summary-highlight">${details.pickupTime}</span>
+                </div>
+            `;
         }
 
         // ============================================
@@ -546,8 +714,6 @@
                 const prevItem = previousStockData[item.id];
                 const justChanged = prevItem && prevItem.stock !== item.stock;
                 
-                const inCart = cart.find(c => c.id === item.id);
-                
                 const storeOpen = isStoreOpen();
                 
                 grid.innerHTML += `
@@ -762,13 +928,18 @@
             if (!storeOpen) {
                 waBtn.textContent = "Toko Tutup - Buka 07:00 WIB";
             } else {
-                waBtn.textContent = "Konfirmasi Pesanan via WhatsApp";
+                waBtn.textContent = "Lanjut ke Pembayaran";
             }
         }
 
-        function sendToWA() {
-            if (!isStoreOpen()) {
-                flashNotify("Toko sedang tutup! Tidak dapat memesan.");
+        function openPaymentModal() {
+            const name = document.getElementById('customerName').value.trim();
+            if (!name) {
+                alert("Harap isi 'Atas Nama' terlebih dahulu!");
+                return;
+            }
+            if (cart.length === 0) {
+                alert("Keranjang masih kosong!");
                 return;
             }
             
@@ -778,40 +949,80 @@
                 return;
             }
             
-            const name = document.getElementById('customerName').value.trim();
-            if (!name) return alert("Harap isi 'Atas Nama' terlebih dahulu!");
-            if (cart.length === 0) return alert("Keranjang masih kosong!");
+            // Render date options
+            renderDateOptions();
+            
+            // Update summary
+            updateOrderSummary();
+            
+            // Close cart modal, open payment modal
+            document.getElementById('cartModal').classList.remove('open');
+            document.getElementById('paymentModal').classList.add('open');
+            
+            // Add listeners for live update
+            document.querySelectorAll('input[name="paymentMethod"], input[name="pickupDate"], input[name="pickupTime"]').forEach(input => {
+                input.addEventListener('change', updateOrderSummary);
+            });
+        }
 
-            let msg = `*PESANAN BARU - KARILA* \n--------------------------\n*Atas Nama:* ${name}\n--------------------------\n`;
+        function confirmOrder() {
+            const name = document.getElementById('customerName').value.trim();
+            const details = getSelectedOrderDetails();
+            
             let total = 0;
+            let itemsList = '';
             const items = [];
             
             cart.forEach(item => {
                 const p = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
                 total += p * item.quantity;
                 items.push({ name: item.name, qty: item.quantity, price: p });
-                msg += `• *${item.name}* (x${item.quantity})\n`;
+                itemsList += `• *${item.name}* (x${item.quantity}) - Rp ${(p * item.quantity).toLocaleString('id-ID')}\n`;
             });
             
-            msg += `\n--------------------------\n*TOTAL: ${currencySymbol}${total.toLocaleString('id-ID')}*`;
+            // Build WhatsApp message
+            let msg = `*PESANAN BARU - KARILA* \n`;
+            msg += `═════════════════════════\n\n`;
+            msg += `*👤 Atas Nama:* ${name}\n`;
+            msg += `*💰 Total:* Rp ${total.toLocaleString('id-ID')}\n`;
+            msg += `*💳 Pembayaran:* ${details.paymentMethod}\n\n`;
+            msg += `*📅 Pengambilan:*\n`;
+            msg += `   Hari: ${details.pickupDay}\n`;
+            msg += `   Tanggal: ${details.pickupDate}\n`;
+            msg += `   Waktu: ${details.pickupTime}\n\n`;
+            msg += `═════════════════════════\n`;
+            msg += `*🛒 Detail Pesanan:*\n`;
+            msg += itemsList;
+            msg += `═════════════════════════\n\n`;
             
-            // Simpan ke Firebase (trigger notif global)
+            if (details.paymentMethod === 'QRIS') {
+                msg += `*Catatan:* Silakan menunggu untuk mendapatkan Qris.\n`;
+            } else {
+                msg += `*Catatan:* Bayar cash saat pengambilan pesanan.\n`;
+            }
+            
+            // Save to Firebase
             const orderData = {
                 customer: name,
                 items: items,
                 total: total,
+                paymentMethod: details.paymentMethod,
+                pickupDay: details.pickupDay,
+                pickupDate: details.pickupDate,
+                pickupTime: details.pickupTime,
                 timestamp: Date.now(),
                 phone: MY_PHONE
             };
             saveOrderToFirebase(orderData);
             
+            // Clear cart
             cart = [];
             saveCartToStorage();
             updateCartCounter();
             
+            // Close modal and open WhatsApp
+            document.getElementById('paymentModal').classList.remove('open');
             window.open(`https://wa.me/${MY_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-            document.getElementById('cartModal').classList.remove('open');
-            document.getElementById('validationBanner').classList.remove('show');
         }
 
         function flashNotify(m) {
@@ -860,7 +1071,15 @@
             document.getElementById('validationBanner').classList.remove('show');
         };
         
-        document.getElementById('waSend').onclick = sendToWA;
+        // Updated: Open payment modal instead of direct WhatsApp
+        document.getElementById('waSend').onclick = openPaymentModal;
+        
+        // Payment modal listeners
+        document.getElementById('paymentClose').onclick = () => {
+            document.getElementById('paymentModal').classList.remove('open');
+        };
+        
+        document.getElementById('confirmOrderBtn').onclick = confirmOrder;
 
         document.getElementById('cartModal').onclick = (e) => {
             if (e.target.id === 'cartModal') {
@@ -869,11 +1088,17 @@
                 document.getElementById('validationBanner').classList.remove('show');
             }
         };
+        
+        document.getElementById('paymentModal').onclick = (e) => {
+            if (e.target.id === 'paymentModal') {
+                document.getElementById('paymentModal').classList.remove('open');
+            }
+        };
 
         // Initialize
         loadCartFromStorage();
         startTimeLockCheck();
-        initFirebaseListener(); // Start listening for orders
+        initFirebaseListener();
         
         if (isStoreOpen()) {
             loadMenu();
