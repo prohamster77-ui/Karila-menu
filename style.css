@@ -14,8 +14,6 @@
     --danger: #c0392b;
     --warning: #e67e22;
     --success: #27ae60;
-    --transfer-blue: #2b6cb0;
-    --transfer-dark: #1a365d;
     --font-display: 'Playfair Display', serif;
     --font-body: 'Poppins', sans-serif;
 }
@@ -670,11 +668,7 @@ header p {
         padding: 6px 12px;
     }
 }
-
-/* ============================================
-   PAYMENT & PICKUP MODAL STYLES - UPDATED
-   ============================================ */
-
+/* Payment & Pickup Modal Styles */
 .payment-section, .pickup-section {
     margin-bottom: 25px;
 }
@@ -685,32 +679,11 @@ header p {
     font-size: 0.9rem;
     font-weight: 600;
     text-transform: uppercase;
-    margin-bottom: 15px;
-    letter-spacing: 1.5px;
-    position: relative;
-    padding-left: 12px;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
 }
 
-.section-label::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 16px;
-    background: var(--bronze);
-    border-radius: 2px;
-}
-
-/* Payment Options - 3 Column Layout */
-.payment-options {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-.date-options, .time-options {
+.payment-options, .date-options, .time-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 12px;
@@ -718,161 +691,25 @@ header p {
 
 .payment-option, .date-option, .time-option {
     cursor: pointer;
-    position: relative;
 }
 
 .payment-option input, .date-option input, .time-option input {
     display: none;
 }
 
-/* Payment Card Styling */
 .payment-card, .date-card, .time-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px 15px;
-    background: rgba(255,255,255,0.03);
+    padding: 15px;
+    background: rgba(255,255,255,0.05);
     border: 2px solid var(--border-color);
-    border-radius: 16px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-align: center;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-.payment-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: transparent;
+    border-radius: 12px;
     transition: all 0.3s;
+    text-align: center;
 }
 
-/* Hover Effects */
-.payment-option:hover .payment-card:not(.disabled),
-.date-option:hover .date-card,
-.time-option:hover .time-card {
-    transform: translateY(-3px);
-    border-color: rgba(205, 127, 50, 0.5);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-/* Checked States */
-.payment-option input:checked + .payment-card {
-    border-color: var(--bronze);
-    background: linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(205, 127, 50, 0.05) 100%);
-    box-shadow: 0 0 25px rgba(205, 127, 50, 0.3), inset 0 0 20px rgba(205, 127, 50, 0.1);
-}
-
-.payment-option input:checked + .payment-card::before {
-    background: var(--bronze);
-}
-
-/* Transfer Specific Styling */
-.payment-option input[value="Transfer"]:checked + .payment-card {
-    border-color: var(--transfer-blue);
-    background: linear-gradient(135deg, rgba(43, 108, 176, 0.2) 0%, rgba(43, 108, 176, 0.05) 100%);
-    box-shadow: 0 0 25px rgba(43, 108, 176, 0.3), inset 0 0 20px rgba(43, 108, 176, 0.1);
-}
-
-.payment-option input[value="Transfer"]:checked + .payment-card::before {
-    background: var(--transfer-blue);
-}
-
-/* Cash Specific Styling */
-.payment-option input[value="Cash"]:checked + .payment-card {
-    border-color: var(--success);
-    background: linear-gradient(135deg, rgba(39, 174, 96, 0.2) 0%, rgba(39, 174, 96, 0.05) 100%);
-    box-shadow: 0 0 25px rgba(39, 174, 96, 0.3), inset 0 0 20px rgba(39, 174, 96, 0.1);
-}
-
-.payment-option input[value="Cash"]:checked + .payment-card::before {
-    background: var(--success);
-}
-
-/* QRIS Disabled State */
-.payment-option.disabled {
-    cursor: not-allowed;
-}
-
-.payment-option.disabled .payment-card {
-    opacity: 0.4;
-    filter: grayscale(1);
-    pointer-events: none;
-}
-
-.payment-option.disabled .payment-card::after {
-    content: '✕';
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
-    background: var(--danger);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: bold;
-}
-
-/* Payment Icons */
-.payment-icon {
-    font-size: 2.2rem;
-    margin-bottom: 10px;
-    transition: transform 0.3s;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-}
-
-.payment-option:hover .payment-icon {
-    transform: scale(1.1);
-}
-
-.time-icon {
-    font-size: 2rem;
-    margin-bottom: 8px;
-}
-
-/* Payment Text */
-.payment-text {
-    font-weight: 700;
-    color: var(--gold);
-    font-size: 0.95rem;
-    margin-bottom: 4px;
-    letter-spacing: 0.5px;
-}
-
-.payment-desc {
-    font-size: 0.75rem;
-    color: #888;
-    margin-top: 2px;
-    font-weight: 400;
-}
-
-/* Error Note for QRIS */
-.payment-error-note {
-    color: #ff6b6b;
-    font-size: 0.7rem;
-    margin-top: 6px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    justify-content: center;
-}
-
-.payment-error-note::before {
-    content: '⚠';
-    font-size: 0.8rem;
-}
-
-/* Date & Time Cards */
+.payment-option input:checked + .payment-card,
 .date-option input:checked + .date-card,
 .time-option input:checked + .time-card {
     border-color: var(--bronze);
@@ -880,248 +717,90 @@ header p {
     box-shadow: 0 0 20px rgba(205, 127, 50, 0.2);
 }
 
+.payment-icon, .time-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.payment-text, .time-text {
+    font-weight: 600;
+    color: var(--gold);
+    font-size: 1rem;
+}
+
+.payment-desc, .time-desc {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
 .date-day {
     font-weight: 700;
     color: var(--gold);
     font-size: 1.1rem;
-    margin-bottom: 4px;
 }
 
 .date-date {
     font-size: 0.8rem;
     color: #aaa;
-    line-height: 1.4;
+    margin-top: 4px;
 }
 
-.time-text {
-    font-weight: 600;
-    color: var(--gold);
-    font-size: 1rem;
-}
-
-/* Order Summary */
 .order-summary {
-    background: linear-gradient(135deg, rgba(205, 127, 50, 0.1) 0%, rgba(0,0,0,0.2) 100%);
+    background: rgba(205, 127, 50, 0.1);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 25px;
-    margin-top: 25px;
-    position: relative;
-}
-
-.order-summary::before {
-    content: '📋';
-    position: absolute;
-    top: -12px;
-    right: 20px;
-    background: var(--darker-glass);
-    padding: 5px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    font-size: 1rem;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
 }
 
 .summary-title {
     font-family: var(--font-display);
     color: var(--gold);
-    font-size: 1.3rem;
-    margin-bottom: 18px;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 12px;
-    letter-spacing: 1px;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
 }
 
 .summary-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 12px;
-    font-size: 0.95rem;
-    align-items: center;
-}
-
-.summary-row:last-child {
-    margin-bottom: 0;
-    padding-top: 12px;
-    border-top: 1px dashed var(--border-color);
-    margin-top: 12px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
 }
 
 .summary-row span:first-child {
     color: #aaa;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.summary-row span:first-child::before {
-    content: '•';
-    color: var(--bronze);
-    font-size: 1.2rem;
 }
 
 .summary-price {
     color: var(--gold);
     font-weight: 700;
-    font-size: 1.2rem;
-    font-family: var(--font-display);
+    font-size: 1.1rem;
 }
 
 .summary-highlight {
     color: var(--bronze);
     font-weight: 600;
-    background: rgba(205, 127, 50, 0.15);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    border: 1px solid rgba(205, 127, 50, 0.3);
 }
 
-/* Payment Method Specific Summary Styles */
-.summary-highlight[data-method="Transfer"] {
-    color: var(--transfer-blue);
-    background: rgba(43, 108, 176, 0.15);
-    border-color: rgba(43, 108, 176, 0.3);
-}
-
-.summary-highlight[data-method="Cash"] {
-    color: var(--success);
-    background: rgba(39, 174, 96, 0.15);
-    border-color: rgba(39, 174, 96, 0.3);
-}
-
-/* Responsive Payment Options */
+/* Date options horizontal scroll on mobile */
 @media (max-width: 600px) {
-    .payment-options {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-    
-    .payment-card {
-        flex-direction: row;
-        justify-content: flex-start;
-        padding: 15px 20px;
-        text-align: left;
-    }
-    
-    .payment-icon {
-        margin-bottom: 0;
-        margin-right: 15px;
-        font-size: 1.8rem;
-    }
-    
-    .payment-text-wrapper {
-        display: flex;
-        flex-direction: column;
-    }
-    
     .date-options {
         display: flex;
         overflow-x: auto;
         grid-template-columns: none;
         gap: 10px;
         padding-bottom: 10px;
-        scrollbar-width: thin;
-        scrollbar-color: var(--bronze) transparent;
-    }
-    
-    .date-options::-webkit-scrollbar {
-        height: 6px;
-    }
-    
-    .date-options::-webkit-scrollbar-thumb {
-        background: var(--bronze);
-        border-radius: 3px;
     }
     
     .date-option {
         flex-shrink: 0;
-        min-width: 130px;
+        min-width: 120px;
     }
     
-    .time-options {
+    .payment-options, .time-options {
         grid-template-columns: 1fr 1fr;
     }
-}
-
-@media (max-width: 480px) {
-    .payment-card {
-        padding: 12px 15px;
-    }
-    
-    .payment-icon {
-        font-size: 1.5rem;
-        margin-right: 12px;
-    }
-    
-    .payment-text {
-        font-size: 0.9rem;
-    }
-    
-    .payment-desc {
-        font-size: 0.7rem;
-    }
-    
-    .section-label {
-        font-size: 0.8rem;
-    }
-    
-    .order-summary {
-        padding: 20px 15px;
-    }
-    
-    .summary-title {
-        font-size: 1.1rem;
-    }
-    
-    .summary-row {
-        font-size: 0.85rem;
-    }
-    
-    .summary-price {
-        font-size: 1rem;
-    }
-}
-
-/* Animation for selection */
-@keyframes selectPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-.payment-option input:checked + .payment-card,
-.date-option input:checked + .date-card,
-.time-option input:checked + .time-card {
-    animation: selectPulse 0.3s ease;
-}
-
-/* Checkmark indicator for selected items */
-.payment-option input:checked + .payment-card::after,
-.date-option input:checked + .date-card::after,
-.time-option input:checked + .time-card::after {
-    content: '✓';
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    width: 22px;
-    height: 22px;
-    background: var(--bronze);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* Transfer specific checkmark */
-.payment-option input[value="Transfer"]:checked + .payment-card::after {
-    background: var(--transfer-blue);
-}
-
-/* Cash specific checkmark */
-.payment-option input[value="Cash"]:checked + .payment-card::after {
-    background: var(--success);
 }
