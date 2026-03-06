@@ -965,44 +965,7 @@
             });
         }
 
-        // ============================================
-        // STOCK UPDATE FUNCTION - NEW FEATURE
-        // ============================================
-        
-        async function updateStockInSheet(orderItems) {
-            try {
-                const stockUpdates = orderItems.map(item => ({
-                    id: item.id,
-                    quantity: item.quantity
-                }));
-                
-                const response = await fetch(GOOGLE_SHEET_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'updateStock',
-                        items: stockUpdates
-                    }),
-                    mode: 'cors'
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    console.error('Stock update failed:', result.error);
-                    return false;
-                }
-                
-                return true;
-            } catch (error) {
-                console.error('Error updating stock:', error);
-                return false;
-            }
-        }
-
-        async function confirmOrder() {
+        function confirmOrder() {
             const name = document.getElementById('customerName').value.trim();
             const details = getSelectedOrderDetails();
             
@@ -1013,23 +976,9 @@
             cart.forEach(item => {
                 const p = item.discount > 0 ? item.price * (1 - item.discount/100) : item.price;
                 total += p * item.quantity;
-                items.push({ 
-                    id: item.id,
-                    name: item.name, 
-                    qty: item.quantity, 
-                    price: p 
-                });
+                items.push({ name: item.name, qty: item.quantity, price: p });
                 itemsList += `• *${item.name}* (x${item.quantity}) - Rp ${(p * item.quantity).toLocaleString('id-ID')}\n`;
             });
-            
-            // Update stock in Google Sheet first
-            flashNotify("Memproses pesanan...");
-            const stockUpdated = await updateStockInSheet(items);
-            
-            if (!stockUpdated) {
-                alert("Gagal mengupdate stok. Silakan coba lagi atau hubungi admin.");
-                return;
-            }
             
             // Build WhatsApp message
             let msg = `*PESANAN BARU - KARILA* \n`;
@@ -1070,9 +1019,6 @@
             cart = [];
             saveCartToStorage();
             updateCartCounter();
-            
-            // Refresh menu to show updated stock
-            loadMenu(true);
             
             // Close modal and open WhatsApp
             document.getElementById('paymentModal').classList.remove('open');
