@@ -126,14 +126,6 @@
                             <span class="payment-desc">Bayar di Tempat</span>
                         </span>
                     </label>
-                    <label class="payment-option">
-                        <input type="radio" name="paymentMethod" value="Transfer">
-                        <span class="payment-card">
-                            <span class="payment-icon">🏦</span>
-                            <span class="payment-text">Transfer</span>
-                            <span class="payment-desc">Bank Transfer</span>
-                        </span>
-                    </label>
                 </div>
             </div>
 
@@ -1039,8 +1031,8 @@
                 return;
             }
             
-            // Build WhatsApp message based on payment method
-            let msg = `*PESANAN BARU - KARILA*\n`;
+            // Build WhatsApp message
+            let msg = `*PESANAN BARU - KARILA* \n`;
             msg += `═════════════════════════\n\n`;
             msg += `*👤 Atas Nama:* ${name}\n`;
             msg += `*💰 Total:* Rp ${total.toLocaleString('id-ID')}\n`;
@@ -1054,17 +1046,8 @@
             msg += itemsList;
             msg += `═════════════════════════\n\n`;
             
-            // Payment method specific notes
             if (details.paymentMethod === 'QRIS') {
-                msg += `*Catatan:* Silakan menunggu untuk mendapatkan QRIS dari admin.\n`;
-            } else if (details.paymentMethod === 'Transfer') {
-                msg += `*Catatan Pembayaran Transfer:*\n`;
-                msg += `Silakan transfer ke rekening berikut:\n`;
-                msg += `🏦 *Bank:* [NAMA BANK]\n`;
-                msg += `👤 *Atas Nama:* [NAMA REKENING]\n`;
-                msg += `🔢 *No. Rekening:* [NOMOR REKENING]\n\n`;
-                msg += `Setelah transfer, harap kirimkan bukti pembayaran ke WhatsApp ini.\n`;
-                msg += `Pesanan akan diproses setelah pembayaran dikonfirmasi.\n`;
+                msg += `*Catatan:* Silakan menunggu untuk mendapatkan Qris.\n`;
             } else {
                 msg += `*Catatan:* Bayar cash saat pengambilan pesanan.\n`;
             }
